@@ -3,26 +3,57 @@ import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 
 export default apiInitializer("1.8.0", (api) => {
+  api.addToolbarPopupMenuOptionsCallback(() => {
+    return {
+      id: "nextcloud_office",
+      icon: "briefcase",
+      label: "Office-Datei",
+      action: (toolbarEvent) => {
+        // Wird nicht direkt aufgerufen, nur für Dropdown
+      },
+    };
+  });
+
   api.onToolbarCreate((toolbar) => {
     toolbar.addButton({
-      id: "nextcloud_word",
+      id: "nextcloud_office",
       group: "extras",
-      icon: "file-word",
-      title: "Word-Datei in Nextcloud erstellen",
-      label: "Word-Datei",
-      perform: (e) => createNextcloudDoc(e),
+      icon: "briefcase",
+      title: "Office-Datei in Nextcloud erstellen",
+      label: "Office",
+      popupMenu: true,
+      buildPopupMenuItems: () => [
+        {
+          id: "nextcloud_word",
+          icon: "file-word",
+          label: "Word",
+          action: (toolbarEvent) => createNextcloudDoc(toolbarEvent, "docx"),
+        },
+        {
+          id: "nextcloud_excel",
+          icon: "file-excel",
+          label: "Excel",
+          action: (toolbarEvent) => createNextcloudDoc(toolbarEvent, "xlsx"),
+        },
+        {
+          id: "nextcloud_powerpoint",
+          icon: "file-powerpoint",
+          label: "PowerPoint",
+          action: (toolbarEvent) => createNextcloudDoc(toolbarEvent, "pptx"),
+        },
+      ],
     });
   });
 
-  async function createNextcloudDoc(toolbarEvent) {
-    const button = document.querySelector(".nextcloud-word-button");
+  async function createNextcloudDoc(toolbarEvent, fileType) {
+    const button = document.querySelector(".nextcloud-office-button");
     if (button) {
-      button.classList.add("nextcloud-word-loading");
+      button.classList.add("nextcloud-office-loading");
     }
 
     try {
-      // API-URL aus Theme-Settings
-      const apiUrl = settings.api_url || "https://nextdiscourse.wolkenbar.de/create-docx.php";
+      // API-URL aus Theme-Settings (neue universelle API)
+      const apiUrl = settings.api_url || "https://nextdiscourse.wolkenbar.de/create-office-file.php";
       
       // Optional: Dateiname aus Topic-Titel generieren (falls verfügbar)
       let fileName;
@@ -31,7 +62,7 @@ export default apiInitializer("1.8.0", (api) => {
         if (topicTitleInput && topicTitleInput.value) {
           const topicTitle = topicTitleInput.value.trim();
           fileName = topicTitle 
-            ? `${topicTitle.substring(0, 50).replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, "_")}.docx`
+            ? `${topicTitle.substring(0, 50).replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, "_")}`
             : undefined;
         }
       } catch (e) {
@@ -45,7 +76,7 @@ export default apiInitializer("1.8.0", (api) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ fileName }),
+        body: JSON.stringify({ fileName, fileType }),
       });
 
       if (!response.ok) {
@@ -63,11 +94,11 @@ export default apiInitializer("1.8.0", (api) => {
       toolbarEvent.addText(linkText);
 
     } catch (error) {
-      console.error("Fehler beim Erstellen der Word-Datei:", error);
-      alert(`Fehler beim Erstellen der Word-Datei: ${error.message}`);
+      console.error("Fehler beim Erstellen der Office-Datei:", error);
+      alert(`Fehler beim Erstellen der Office-Datei: ${error.message}`);
     } finally {
       if (button) {
-        button.classList.remove("nextcloud-word-loading");
+        button.classList.remove("nextcloud-office-loading");
       }
     }
   }

@@ -1,5 +1,4 @@
 api_url:
-  default: "https://nextdiscourse.wolkenbar.de/create-docx.php"
+  default: "https://nextdiscourse.wolkenbar.de/create-office-file.php"
   type: string
-  description: "URL des LAMP-Server API-Endpoints für Nextcloud-Integration"
-
+  description: "URL des LAMP-Server API-Endpoints für Nextcloud Office-Integration"

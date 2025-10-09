@@ -1,10 +1,9 @@
 {
-  "name": "Nextcloud Word Integration",
+  "name": "Nextcloud Office Integration",
   "about_url": "https://github.com/rstockm/discourse-nextcloud-word",
   "license_url": "https://github.com/rstockm/discourse-nextcloud-word/blob/main/LICENSE",
   "component": true,
   "authors": "Ralf Stockmann",
-  "theme_version": "1.0.0",
+  "theme_version": "2.0.0",
   "minimum_discourse_version": "2.8.0"
 }
-
