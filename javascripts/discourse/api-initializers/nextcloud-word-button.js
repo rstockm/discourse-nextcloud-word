@@ -5,7 +5,7 @@ export default apiInitializer("1.8.0", (api) => {
     toolbar.addButton({
       id: "nextcloud_word",
       group: "extras",
-      icon: "file-word",
+      icon: "file-text",
       title: "Word-Dokument in Nextcloud erstellen",
       perform: (e) => createNextcloudDoc(e, "docx"),
     });
@@ -13,7 +13,7 @@ export default apiInitializer("1.8.0", (api) => {
     toolbar.addButton({
       id: "nextcloud_excel",
       group: "extras",
-      icon: "file-excel",
+      icon: "table",
       title: "Excel-Tabelle in Nextcloud erstellen",
       perform: (e) => createNextcloudDoc(e, "xlsx"),
     });
@@ -21,7 +21,7 @@ export default apiInitializer("1.8.0", (api) => {
     toolbar.addButton({
       id: "nextcloud_powerpoint",
       group: "extras",
-      icon: "file-powerpoint",
+      icon: "play",
       title: "PowerPoint-Präsentation in Nextcloud erstellen",
       perform: (e) => createNextcloudDoc(e, "pptx"),
     });
