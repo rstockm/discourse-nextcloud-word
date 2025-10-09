@@ -5,7 +5,7 @@ export default apiInitializer("1.8.0", (api) => {
     toolbar.addButton({
       id: "nextcloud_word",
       group: "extras",
-      icon: "file-text",
+      icon: "file",
       title: "Word-Dokument in Nextcloud erstellen",
       perform: (e) => createNextcloudDoc(e, "docx"),
     });
