@@ -24,12 +24,20 @@ export default apiInitializer("1.8.0", (api) => {
       // API-URL aus Theme-Settings
       const apiUrl = settings.api_url || "https://nextdiscourse.wolkenbar.de/create-docx.php";
       
-      // Optional: Dateiname aus Topic-Titel generieren
-      const composer = toolbarEvent.composer;
-      const topicTitle = composer.get("title") || "";
-      const fileName = topicTitle 
-        ? `${topicTitle.substring(0, 50).replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, "_")}.docx`
-        : undefined;
+      // Optional: Dateiname aus Topic-Titel generieren (falls verfügbar)
+      let fileName;
+      try {
+        const topicTitleInput = document.querySelector("#reply-title");
+        if (topicTitleInput && topicTitleInput.value) {
+          const topicTitle = topicTitleInput.value.trim();
+          fileName = topicTitle 
+            ? `${topicTitle.substring(0, 50).replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, "_")}.docx`
+            : undefined;
+        }
+      } catch (e) {
+        // Fallback: kein Dateiname aus Titel
+        fileName = undefined;
+      }
 
       // API-Call zum LAMP-Server
       const response = await fetch(apiUrl, {
@@ -64,4 +72,3 @@ export default apiInitializer("1.8.0", (api) => {
     }
   }
 });
-
