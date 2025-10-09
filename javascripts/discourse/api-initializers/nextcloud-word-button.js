@@ -58,9 +58,9 @@ export default apiInitializer("1.8.0", (api) => {
         throw new Error(data.error || "Unbekannter Fehler");
       }
 
-      // URL ins Posting einfügen
-      const markdownLink = `\n\n📄 [${data.fileName}](${data.url})\n\n`;
-      toolbarEvent.addText(markdownLink);
+      // URL ins Posting einfügen (nur URL für Onebox-Vorschau)
+      const linkText = `\n\n${data.url}\n\n`;
+      toolbarEvent.addText(linkText);
 
     } catch (error) {
       console.error("Fehler beim Erstellen der Word-Datei:", error);
