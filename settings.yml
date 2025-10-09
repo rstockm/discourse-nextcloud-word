@@ -1,0 +1,5 @@
+api_url:
+  default: "https://nextdiscourse.wolkenbar.de/create-docx.php"
+  type: string
+  description: "URL des LAMP-Server API-Endpoints für Nextcloud-Integration"
+

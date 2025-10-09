@@ -1,0 +1,15 @@
+.d-editor-button-bar .nextcloud-word-button {
+  .d-icon {
+    color: var(--primary-medium);
+  }
+  
+  &:hover .d-icon {
+    color: var(--primary);
+  }
+}
+
+.nextcloud-word-loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
