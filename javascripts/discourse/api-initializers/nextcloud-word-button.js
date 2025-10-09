@@ -1,47 +1,29 @@
 import { apiInitializer } from "discourse/lib/api";
-import { ajax } from "discourse/lib/ajax";
-import { popupAjaxError } from "discourse/lib/ajax-error";
 
 export default apiInitializer("1.8.0", (api) => {
-  api.addToolbarPopupMenuOptionsCallback(() => {
-    return {
-      id: "nextcloud_office",
-      icon: "briefcase",
-      label: "Office-Datei",
-      action: (toolbarEvent) => {
-        // Wird nicht direkt aufgerufen, nur für Dropdown
-      },
-    };
-  });
-
   api.onToolbarCreate((toolbar) => {
     toolbar.addButton({
-      id: "nextcloud_office",
+      id: "nextcloud_word",
       group: "extras",
-      icon: "briefcase",
-      title: "Office-Datei in Nextcloud erstellen",
-      label: "Office",
-      popupMenu: true,
-      buildPopupMenuItems: () => [
-        {
-          id: "nextcloud_word",
-          icon: "file-word",
-          label: "Word",
-          action: (toolbarEvent) => createNextcloudDoc(toolbarEvent, "docx"),
-        },
-        {
-          id: "nextcloud_excel",
-          icon: "file-excel",
-          label: "Excel",
-          action: (toolbarEvent) => createNextcloudDoc(toolbarEvent, "xlsx"),
-        },
-        {
-          id: "nextcloud_powerpoint",
-          icon: "file-powerpoint",
-          label: "PowerPoint",
-          action: (toolbarEvent) => createNextcloudDoc(toolbarEvent, "pptx"),
-        },
-      ],
+      icon: "file-word",
+      title: "Word-Dokument in Nextcloud erstellen",
+      perform: (e) => createNextcloudDoc(e, "docx"),
+    });
+    
+    toolbar.addButton({
+      id: "nextcloud_excel",
+      group: "extras",
+      icon: "file-excel",
+      title: "Excel-Tabelle in Nextcloud erstellen",
+      perform: (e) => createNextcloudDoc(e, "xlsx"),
+    });
+    
+    toolbar.addButton({
+      id: "nextcloud_powerpoint",
+      group: "extras",
+      icon: "file-powerpoint",
+      title: "PowerPoint-Präsentation in Nextcloud erstellen",
+      perform: (e) => createNextcloudDoc(e, "pptx"),
     });
   });
 
