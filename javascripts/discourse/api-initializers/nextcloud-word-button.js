@@ -39,17 +39,16 @@ export default apiInitializer("1.8.0", (api) => {
       // Standard-Dateiname generieren
       const defaultFileName = this.generateDefaultFileName(fileType);
       
-      // Modal anzeigen
-      this.modal.show("nextcloud-file-name-modal", {
-        model: {
-          fileType: fileType,
-          fileTypeLabel: fileTypeLabel,
-          fileName: defaultFileName,
-          onConfirm: (fileName) => {
-            this.createNextcloudDoc(fileType, fileName);
-          }
-        }
-      });
+      // Einfache Prompt-Dialog verwenden
+      const userInput = prompt(
+        `Enter file name for ${fileTypeLabel}:\n\nDefault: ${defaultFileName}`,
+        defaultFileName
+      );
+      
+      if (userInput && userInput.trim()) {
+        const fileName = userInput.trim();
+        this.createNextcloudDoc(fileType, fileName);
+      }
     },
 
     generateDefaultFileName(fileType) {
