@@ -2,3 +2,120 @@
   opacity: 0.5;
   pointer-events: none;
 }
+
+// Custom Dialog für Dateinamen-Eingabe
+.nextcloud-filename-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.nextcloud-filename-dialog {
+  background: var(--secondary);
+  border-radius: var(--d-border-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  
+  .dialog-header {
+    padding: 1.5em;
+    border-bottom: 1px solid var(--primary-low);
+    
+    h3 {
+      margin: 0;
+      font-size: 1.25em;
+      color: var(--primary);
+    }
+  }
+  
+  .dialog-body {
+    padding: 1.5em;
+    
+    .dialog-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5em;
+      color: var(--primary);
+    }
+    
+    .filename-input-wrapper {
+      display: flex;
+      align-items: center;
+      border: 2px solid var(--primary-low);
+      border-radius: var(--d-border-radius);
+      overflow: hidden;
+      transition: border-color 0.2s;
+      
+      &:focus-within {
+        border-color: var(--tertiary);
+      }
+      
+      .filename-input {
+        flex: 1;
+        padding: 0.75em;
+        border: none;
+        background: var(--secondary);
+        color: var(--primary);
+        font-size: 1em;
+        outline: none;
+      }
+      
+      .filename-extension {
+        padding: 0.75em 1em;
+        background: var(--primary-very-low);
+        color: var(--primary-medium);
+        font-weight: 600;
+        border-left: 1px solid var(--primary-low);
+        white-space: nowrap;
+      }
+    }
+    
+    .dialog-instructions {
+      margin-top: 0.5em;
+      font-size: 0.875em;
+      color: var(--primary-medium);
+    }
+  }
+  
+  .dialog-footer {
+    padding: 1em 1.5em;
+    border-top: 1px solid var(--primary-low);
+    display: flex;
+    gap: 0.5em;
+    justify-content: flex-end;
+    
+    .btn {
+      padding: 0.5em 1.25em;
+      border-radius: var(--d-border-radius);
+      cursor: pointer;
+      font-weight: 500;
+      
+      &.btn-primary {
+        background: var(--tertiary);
+        color: var(--secondary);
+        border: none;
+        
+        &:hover {
+          background: var(--tertiary-hover);
+        }
+      }
+      
+      &:not(.btn-primary) {
+        background: var(--primary-low);
+        color: var(--primary);
+        border: 1px solid var(--primary-low-mid);
+        
+        &:hover {
+          background: var(--primary-low-mid);
+        }
+      }
+    }
+  }
+}

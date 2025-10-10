@@ -39,3 +39,4 @@ https://github.com/rstockm/discourse-nextcloud-word
 4. Install klicken
 
 Fertig! 🎉
+

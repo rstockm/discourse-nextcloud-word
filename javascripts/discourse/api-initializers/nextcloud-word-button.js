@@ -36,19 +36,97 @@ export default apiInitializer("1.8.0", (api) => {
     },
 
     showFileNameModal(fileType, fileTypeLabel) {
-      // Standard-Dateiname generieren
-      const defaultFileName = this.generateDefaultFileName(fileType);
+      // Standard-Dateiname generieren (ohne Endung)
+      const defaultFileNameWithoutExt = this.generateDefaultFileName(fileType).replace(`.${fileType}`, '');
       
-      // Einfache Prompt-Dialog verwenden
-      const userInput = prompt(
-        `Enter file name for ${fileTypeLabel}:\n\nDefault: ${defaultFileName}`,
-        defaultFileName
-      );
+      // Custom Dialog erstellen
+      this.showCustomDialog(defaultFileNameWithoutExt, fileType, fileTypeLabel);
+    },
+    
+    showCustomDialog(defaultName, fileType, fileTypeLabel) {
+      // Dialog-HTML erstellen
+      const dialogHTML = `
+        <div class="nextcloud-filename-dialog-overlay">
+          <div class="nextcloud-filename-dialog">
+            <div class="dialog-header">
+              <h3>Create ${fileTypeLabel}</h3>
+            </div>
+            <div class="dialog-body">
+              <label class="dialog-label">File Name:</label>
+              <div class="filename-input-wrapper">
+                <input 
+                  type="text" 
+                  class="filename-input" 
+                  value="${this.escapeHtml(defaultName)}"
+                  placeholder="Enter file name"
+                  autofocus
+                />
+                <span class="filename-extension">.${fileType}</span>
+              </div>
+              <div class="dialog-instructions">
+                The file extension .${fileType} will be added automatically.
+              </div>
+            </div>
+            <div class="dialog-footer">
+              <button class="btn btn-primary dialog-confirm">Create File</button>
+              <button class="btn dialog-cancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+      `;
       
-      if (userInput && userInput.trim()) {
-        const fileName = userInput.trim();
-        this.createNextcloudDoc(fileType, fileName);
-      }
+      // Dialog ins DOM einfügen
+      const dialogElement = document.createElement('div');
+      dialogElement.innerHTML = dialogHTML;
+      document.body.appendChild(dialogElement);
+      
+      // Event-Listener
+      const overlay = dialogElement.querySelector('.nextcloud-filename-dialog-overlay');
+      const input = dialogElement.querySelector('.filename-input');
+      const confirmBtn = dialogElement.querySelector('.dialog-confirm');
+      const cancelBtn = dialogElement.querySelector('.dialog-cancel');
+      
+      const closeDialog = () => {
+        document.body.removeChild(dialogElement);
+      };
+      
+      const confirmAction = () => {
+        const fileName = input.value.trim();
+        if (fileName) {
+          const fullFileName = `${fileName}.${fileType}`;
+          closeDialog();
+          this.createNextcloudDoc(fileType, fullFileName);
+        }
+      };
+      
+      // Enter-Taste für Bestätigung
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          confirmAction();
+        } else if (e.key === 'Escape') {
+          closeDialog();
+        }
+      });
+      
+      confirmBtn.addEventListener('click', confirmAction);
+      cancelBtn.addEventListener('click', closeDialog);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          closeDialog();
+        }
+      });
+      
+      // Input fokussieren und Text selektieren
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 100);
+    },
+    
+    escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     },
 
     generateDefaultFileName(fileType) {
