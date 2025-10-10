@@ -3,30 +3,6 @@
   pointer-events: none;
 }
 
-// Überschreibe die Menü-Labels für die Nextcloud-Buttons
-.d-editor-popup-menu {
-  .menu-item[data-id="nextcloud_word"] .menu-item-label::after {
-    content: "Word-Dokument";
-  }
-  
-  .menu-item[data-id="nextcloud_excel"] .menu-item-label::after {
-    content: "Excel-Tabelle";
-  }
-  
-  .menu-item[data-id="nextcloud_powerpoint"] .menu-item-label::after {
-    content: "PowerPoint-Präsentation";
-  }
-  
-  // Verstecke die ursprünglichen Labels
-  .menu-item[data-id^="nextcloud_"] .menu-item-label {
-    font-size: 0;
-    
-    &::after {
-      font-size: 1rem;
-    }
-  }
-}
-
 // Custom Dialog für Dateinamen-Eingabe
 .nextcloud-filename-dialog-overlay {
   position: fixed;

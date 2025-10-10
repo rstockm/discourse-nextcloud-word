@@ -1,8 +1,8 @@
 en:
   nextcloud_office:
-    create_file: "Create"
-    file_name: "File Name"
-    file_name_instructions: "The file extension will be added automatically."
-    create: "Create File"
-    creating: "Creating"
-
+    word_document: "Word Document"
+    excel_spreadsheet: "Excel Spreadsheet"
+    powerpoint_presentation: "PowerPoint Presentation"
+    create_word_document: "Create Word Document"
+    create_excel_spreadsheet: "Create Excel Spreadsheet"
+    create_powerpoint_presentation: "Create PowerPoint Presentation"
