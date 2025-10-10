@@ -131,23 +131,34 @@ export default apiInitializer("1.8.0", (api) => {
 
     generateDefaultFileName(fileType) {
       // Topic-Titel als Basis verwenden
-      let baseName = "Document";
+      let topicTitle = "";
       
       try {
         const topicTitleInput = document.querySelector("#reply-title");
         if (topicTitleInput && topicTitleInput.value) {
-          const topicTitle = topicTitleInput.value.trim();
+          topicTitle = topicTitleInput.value.trim();
           if (topicTitle) {
-            baseName = topicTitle.substring(0, 50).replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, "_");
+            // Titel bereinigen für Dateinamen
+            topicTitle = topicTitle.substring(0, 50).replace(/[^a-zA-Z0-9äöüÄÖÜß\-_\s]/g, "").replace(/\s+/g, "_");
           }
         }
       } catch (e) {
-        // Fallback: Standard-Name
+        // Fallback wird unten gesetzt
       }
       
-      // Timestamp hinzufügen
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
-      return `${baseName}_${timestamp}.${fileType}`;
+      // ISO-Datum generieren (YYYY-MM-DD)
+      const now = new Date();
+      const isoDate = now.toISOString().slice(0, 10); // YYYY-MM-DD
+      
+      // Dateiname zusammensetzen: Titel_Datum oder nur Datum falls kein Titel
+      let fileName;
+      if (topicTitle) {
+        fileName = `${topicTitle}_${isoDate}.${fileType}`;
+      } else {
+        fileName = `Document_${isoDate}.${fileType}`;
+      }
+      
+      return fileName;
     },
 
     createNextcloudDoc(fileType, fileName) {
