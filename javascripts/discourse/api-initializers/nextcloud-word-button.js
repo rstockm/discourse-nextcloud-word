@@ -72,9 +72,23 @@ export default apiInitializer("1.8.0", (api) => {
       }
 
       // URL ins Posting einfügen (nur URL für Onebox-Vorschau)
-      // Zusätzlicher Absatz nach URL um Onebox-Vorschau zu triggern
-      const linkText = `\n\n${data.url}\n\n\n`;
+      const linkText = `\n\n${data.url}\n\n`;
       toolbarEvent.addText(linkText);
+      
+      // Onebox-Vorschau explizit triggern
+      setTimeout(() => {
+        const composer = toolbarEvent.composer;
+        if (composer && composer.trigger) {
+          composer.trigger('composer:refresh-preview');
+        }
+        
+        // Alternative: DOM-Event für Onebox-Refresh
+        const event = new Event('input', { bubbles: true });
+        const textarea = document.querySelector('.d-editor-input');
+        if (textarea) {
+          textarea.dispatchEvent(event);
+        }
+      }, 100);
 
     } catch (error) {
       console.error("Fehler beim Erstellen der Office-Datei:", error);
