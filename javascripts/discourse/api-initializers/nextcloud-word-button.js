@@ -6,24 +6,24 @@ export default apiInitializer("1.8.0", (api) => {
     id: "nextcloud_word",
     action: "createNextcloudWord",
     icon: "file",
-    label: "nextcloud_office.word_document",
-    title: "nextcloud_office.create_word_document"
+    label: "Word-Dokument",
+    title: "Word-Dokument erstellen"
   });
   
   api.addComposerToolbarPopupMenuOption({
     id: "nextcloud_excel", 
     action: "createNextcloudExcel",
     icon: "table",
-    label: "nextcloud_office.excel_spreadsheet",
-    title: "nextcloud_office.create_excel_spreadsheet"
+    label: "Excel-Tabelle",
+    title: "Excel-Tabelle erstellen"
   });
   
   api.addComposerToolbarPopupMenuOption({
     id: "nextcloud_powerpoint",
     action: "createNextcloudPowerPoint",
     icon: "play", 
-    label: "nextcloud_office.powerpoint_presentation",
-    title: "nextcloud_office.create_powerpoint_presentation"
+    label: "PowerPoint-Präsentation",
+    title: "PowerPoint-Präsentation erstellen"
   });
 
   // Controller-Aktionen definieren (mit pluginId)

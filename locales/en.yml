@@ -1,8 +1,0 @@
-en:
-  nextcloud_office:
-    word_document: "Word Document"
-    excel_spreadsheet: "Excel Spreadsheet"
-    powerpoint_presentation: "PowerPoint Presentation"
-    create_word_document: "Create Word Document"
-    create_excel_spreadsheet: "Create Excel Spreadsheet"
-    create_powerpoint_presentation: "Create PowerPoint Presentation"
