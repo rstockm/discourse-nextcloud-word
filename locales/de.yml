@@ -1,0 +1,25 @@
+de:
+  composer:
+    word_document:
+      label: "Word-Dokument"
+      title: "Word-Dokument erstellen"
+    excel_spreadsheet:
+      label: "Excel-Tabelle"
+      title: "Excel-Tabelle erstellen"
+    powerpoint_presentation:
+      label: "PowerPoint-Präsentation"
+      title: "PowerPoint-Präsentation erstellen"
+  
+  modal:
+    create_document:
+      heading: "{{type}} erstellen"
+      filename_label: "Dateiname"
+      filename_placeholder: "Dateiname eingeben"
+      extension_info: "Die Dateiendung .{{ext}} wird automatisch hinzugefügt."
+      confirm_button: "Datei erstellen"
+      cancel_button: "Abbrechen"
+      creating: "Erstelle..."
+      error_empty: "Bitte geben Sie einen Dateinamen ein."
+  
+  filename:
+    default_prefix: "Dokument"

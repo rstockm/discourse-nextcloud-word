@@ -1,0 +1,25 @@
+en:
+  composer:
+    word_document:
+      label: "Word Document"
+      title: "Create Word Document"
+    excel_spreadsheet:
+      label: "Excel Spreadsheet"
+      title: "Create Excel Spreadsheet"
+    powerpoint_presentation:
+      label: "PowerPoint Presentation"
+      title: "Create PowerPoint Presentation"
+  
+  modal:
+    create_document:
+      heading: "Create {{type}}"
+      filename_label: "File Name"
+      filename_placeholder: "Enter file name..."
+      extension_info: "The file extension .{{ext}} will be added automatically."
+      confirm_button: "Create File"
+      cancel_button: "Cancel"
+      creating: "Creating..."
+      error_empty: "Please enter a file name."
+  
+  filename:
+    default_prefix: "Document"

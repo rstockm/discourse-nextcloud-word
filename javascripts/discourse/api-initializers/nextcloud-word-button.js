@@ -6,24 +6,24 @@ export default apiInitializer("1.8.0", (api) => {
     id: "nextcloud_word",
     action: "createNextcloudWord",
     icon: "file",
-    label: "Word-Dokument",
-    title: "Word-Dokument erstellen"
+    label: themePrefix("composer.word_document.label"),
+    title: I18n.t(themePrefix("composer.word_document.title"))
   });
   
   api.addComposerToolbarPopupMenuOption({
     id: "nextcloud_excel", 
     action: "createNextcloudExcel",
     icon: "table",
-    label: "Excel-Tabelle",
-    title: "Excel-Tabelle erstellen"
+    label: themePrefix("composer.excel_spreadsheet.label"),
+    title: I18n.t(themePrefix("composer.excel_spreadsheet.title"))
   });
   
   api.addComposerToolbarPopupMenuOption({
     id: "nextcloud_powerpoint",
     action: "createNextcloudPowerPoint",
     icon: "play", 
-    label: "PowerPoint-Präsentation",
-    title: "PowerPoint-Präsentation erstellen"
+    label: themePrefix("composer.powerpoint_presentation.label"),
+    title: I18n.t(themePrefix("composer.powerpoint_presentation.title"))
   });
 
   // Controller-Aktionen definieren (mit pluginId)
@@ -50,39 +50,42 @@ export default apiInitializer("1.8.0", (api) => {
     },
     
     showCustomDialog(defaultName, fileType, fileTypeLabel) {
-      // Deutsche Labels basierend auf Dateityp
-      const germanLabels = {
-        "Word Document": "Word-Dokument erstellen",
-        "Excel Spreadsheet": "Excel-Tabelle erstellen", 
-        "PowerPoint Presentation": "PowerPoint-Präsentation erstellen"
+      // Übersetzungsschlüssel basierend auf Dateityp
+      const typeKeys = {
+        "Word Document": "composer.word_document.title",
+        "Excel Spreadsheet": "composer.excel_spreadsheet.title", 
+        "PowerPoint Presentation": "composer.powerpoint_presentation.title"
       };
+      
+      const titleKey = typeKeys[fileTypeLabel] || "modal.create_document.heading";
+      const heading = I18n.t(themePrefix(titleKey));
       
       // Dialog-HTML erstellen
       const dialogHTML = `
         <div class="nextcloud-filename-dialog-overlay">
           <div class="nextcloud-filename-dialog">
             <div class="dialog-header">
-              <h3>${germanLabels[fileTypeLabel] || fileTypeLabel}</h3>
+              <h3>${heading}</h3>
             </div>
             <div class="dialog-body">
-              <label class="dialog-label">Dateiname:</label>
+              <label class="dialog-label">${I18n.t(themePrefix("modal.create_document.filename_label"))}:</label>
               <div class="filename-input-wrapper">
                 <input 
                   type="text" 
                   class="filename-input" 
                   value="${this.escapeHtml(defaultName)}"
-                  placeholder="Dateiname eingeben"
+                  placeholder="${I18n.t(themePrefix("modal.create_document.filename_placeholder"))}"
                   autofocus
                 />
                 <span class="filename-extension">.${fileType}</span>
               </div>
               <div class="dialog-instructions">
-                Die Dateiendung .${fileType} wird automatisch hinzugefügt.
+                ${I18n.t(themePrefix("modal.create_document.extension_info"), { ext: fileType })}
               </div>
             </div>
             <div class="dialog-footer">
-              <button class="btn btn-primary dialog-confirm">Datei erstellen</button>
-              <button class="btn dialog-cancel">Abbrechen</button>
+              <button class="btn btn-primary dialog-confirm">${I18n.t(themePrefix("modal.create_document.confirm_button"))}</button>
+              <button class="btn dialog-cancel">${I18n.t(themePrefix("modal.create_document.cancel_button"))}</button>
             </div>
           </div>
         </div>
@@ -178,7 +181,8 @@ export default apiInitializer("1.8.0", (api) => {
       if (topicTitle && topicTitle.length > 0) {
         fileName = `${topicTitle}_${isoDate}.${fileType}`;
       } else {
-        fileName = `Document_${isoDate}.${fileType}`;
+        const defaultPrefix = I18n.t(themePrefix("filename.default_prefix"));
+        fileName = `${defaultPrefix}_${isoDate}.${fileType}`;
       }
       
       console.log("Generated filename:", fileName, "from topic title:", topicTitle);

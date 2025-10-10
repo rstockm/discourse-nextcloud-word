@@ -25,7 +25,7 @@ export default Controller.extend({
       
       const fileName = this.fileName?.trim();
       if (!fileName) {
-        this.dialog.alert("Please enter a file name.");
+        this.dialog.alert(I18n.t(themePrefix("modal.create_document.error_empty")));
         return;
       }
 

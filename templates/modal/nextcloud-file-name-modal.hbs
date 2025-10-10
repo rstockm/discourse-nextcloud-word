@@ -1,9 +1,9 @@
 <div class="modal-body">
   <div class="nextcloud-file-name-modal">
-    <h3>Create {{model.fileTypeLabel}}</h3>
+    <h3>{{theme-i18n "modal.create_document.heading" type=model.fileTypeLabel}}</h3>
     
     <div class="control-group">
-      <label class="control-label">File Name</label>
+      <label class="control-label">{{theme-i18n "modal.create_document.filename_label"}}</label>
       <div class="controls">
         <input 
           type="text" 
@@ -11,11 +11,11 @@
           value={{fileName}} 
           {{on "input" (action "updateFileName")}}
           {{on "keydown" (action "handleKeyDown")}}
-          placeholder="Enter file name..."
+          placeholder={{theme-i18n "modal.create_document.filename_placeholder"}}
           autofocus
         />
         <div class="control-instructions">
-          The file extension will be added automatically.
+          {{theme-i18n "modal.create_document.extension_info" ext=model.fileType}}
         </div>
       </div>
     </div>
@@ -29,9 +29,9 @@
     disabled={{isLoading}}
   >
     {{#if isLoading}}
-      Creating...
+      {{theme-i18n "modal.create_document.creating"}}
     {{else}}
-      Create File
+      {{theme-i18n "modal.create_document.confirm_button"}}
     {{/if}}
   </button>
   
@@ -40,6 +40,6 @@
     {{action "cancel"}}
     disabled={{isLoading}}
   >
-    Cancel
+    {{theme-i18n "modal.create_document.cancel_button"}}
   </button>
 </div>
