@@ -1,0 +1,7 @@
+en:
+  nextcloud_office:
+    create_file: "Create"
+    file_name: "File Name"
+    file_name_instructions: "The file extension will be added automatically."
+    create: "Create File"
+    creating: "Creating"

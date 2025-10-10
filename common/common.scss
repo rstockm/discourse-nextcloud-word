@@ -2,3 +2,31 @@
   opacity: 0.5;
   pointer-events: none;
 }
+
+.nextcloud-file-name-modal {
+  .control-group {
+    margin-bottom: 1em;
+  }
+  
+  .control-label {
+    font-weight: bold;
+    margin-bottom: 0.5em;
+    display: block;
+  }
+  
+  .controls {
+    .input-large {
+      width: 100%;
+      padding: 0.5em;
+      border: 1px solid var(--primary-low);
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    
+    .control-instructions {
+      font-size: 0.9em;
+      color: var(--primary-medium);
+      margin-top: 0.25em;
+    }
+  }
+}

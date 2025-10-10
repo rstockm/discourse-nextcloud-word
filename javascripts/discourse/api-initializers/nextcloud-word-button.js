@@ -25,39 +25,62 @@ export default apiInitializer("1.8.0", (api) => {
     pluginId: "nextcloud-office-integration",
     actions: {
       createNextcloudWord() {
-        this.createNextcloudDoc("docx");
+        this.showFileNameModal("docx", "Word Document");
       },
       createNextcloudExcel() {
-        this.createNextcloudDoc("xlsx");
+        this.showFileNameModal("xlsx", "Excel Spreadsheet");
       },
       createNextcloudPowerPoint() {
-        this.createNextcloudDoc("pptx");
+        this.showFileNameModal("pptx", "PowerPoint Presentation");
       }
     },
 
-    createNextcloudDoc(fileType) {
-      this.createNextcloudDocAsync(fileType);
+    showFileNameModal(fileType, fileTypeLabel) {
+      // Standard-Dateiname generieren
+      const defaultFileName = this.generateDefaultFileName(fileType);
+      
+      // Modal anzeigen
+      this.modal.show("nextcloud-file-name-modal", {
+        model: {
+          fileType: fileType,
+          fileTypeLabel: fileTypeLabel,
+          fileName: defaultFileName,
+          onConfirm: (fileName) => {
+            this.createNextcloudDoc(fileType, fileName);
+          }
+        }
+      });
     },
 
-    async createNextcloudDocAsync(fileType) {
+    generateDefaultFileName(fileType) {
+      // Topic-Titel als Basis verwenden
+      let baseName = "Document";
+      
+      try {
+        const topicTitleInput = document.querySelector("#reply-title");
+        if (topicTitleInput && topicTitleInput.value) {
+          const topicTitle = topicTitleInput.value.trim();
+          if (topicTitle) {
+            baseName = topicTitle.substring(0, 50).replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, "_");
+          }
+        }
+      } catch (e) {
+        // Fallback: Standard-Name
+      }
+      
+      // Timestamp hinzufügen
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
+      return `${baseName}_${timestamp}.${fileType}`;
+    },
+
+    createNextcloudDoc(fileType, fileName) {
+      this.createNextcloudDocAsync(fileType, fileName);
+    },
+
+    async createNextcloudDocAsync(fileType, fileName) {
       try {
         // API-URL aus Theme-Settings
         const apiUrl = settings.api_url || "https://nextdiscourse.wolkenbar.de/create-office-file.php";
-        
-        // Optional: Dateiname aus Topic-Titel generieren
-        let fileName;
-        try {
-          const topicTitleInput = document.querySelector("#reply-title");
-          if (topicTitleInput && topicTitleInput.value) {
-            const topicTitle = topicTitleInput.value.trim();
-            fileName = topicTitle 
-              ? `${topicTitle.substring(0, 50).replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, "_")}`
-              : undefined;
-          }
-        } catch (e) {
-          // Fallback: kein Dateiname aus Titel
-          fileName = undefined;
-        }
 
         // API-Call zum LAMP-Server
         const response = await fetch(apiUrl, {

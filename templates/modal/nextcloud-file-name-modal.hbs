@@ -1,0 +1,45 @@
+<div class="modal-body">
+  <div class="nextcloud-file-name-modal">
+    <h3>Create {{model.fileTypeLabel}}</h3>
+    
+    <div class="control-group">
+      <label class="control-label">File Name</label>
+      <div class="controls">
+        <input 
+          type="text" 
+          class="input-large" 
+          value={{model.fileName}} 
+          {{on "input" this.updateFileName}}
+          {{on "keydown" this.handleKeyDown}}
+          placeholder="Enter file name..."
+          autofocus
+        />
+        <div class="control-instructions">
+          The file extension will be added automatically.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-footer">
+  <button 
+    class="btn btn-primary" 
+    {{on "click" this.confirm}}
+    disabled={{this.isLoading}}
+  >
+    {{#if this.isLoading}}
+      Creating...
+    {{else}}
+      Create File
+    {{/if}}
+  </button>
+  
+  <button 
+    class="btn" 
+    {{on "click" this.cancel}}
+    disabled={{this.isLoading}}
+  >
+    Cancel
+  </button>
+</div>
