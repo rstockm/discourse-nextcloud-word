@@ -1,36 +1,45 @@
 import { apiInitializer } from "discourse/lib/api";
 
 export default apiInitializer("1.8.0", (api) => {
-  // Alternative: Direkte Buttons in der Toolbar statt Popup-Menü
-  api.onToolbarCreate((toolbar) => {
-    toolbar.addButton({
-      id: "nextcloud_word",
-      group: "extras",
-      icon: "file",
-      title: "Word-Dokument erstellen",
-      perform: (e) => this.showFileNameModal("docx", "Word-Dokument")
-    });
-    
-    toolbar.addButton({
-      id: "nextcloud_excel",
-      group: "extras", 
-      icon: "table",
-      title: "Excel-Tabelle erstellen",
-      perform: (e) => this.showFileNameModal("xlsx", "Excel-Tabelle")
-    });
-    
-    toolbar.addButton({
-      id: "nextcloud_powerpoint",
-      group: "extras",
-      icon: "play", 
-      title: "PowerPoint-Präsentation erstellen",
-      perform: (e) => this.showFileNameModal("pptx", "PowerPoint-Präsentation")
-    });
+  // Popup-Menü-Einträge für das "+" Menü (neue API)
+  api.addComposerToolbarPopupMenuOption({
+    id: "nextcloud_word",
+    action: "createNextcloudWord",
+    icon: "file",
+    label: "Word-Dokument",
+    title: "Word-Dokument erstellen"
+  });
+  
+  api.addComposerToolbarPopupMenuOption({
+    id: "nextcloud_excel", 
+    action: "createNextcloudExcel",
+    icon: "table",
+    label: "Excel-Tabelle",
+    title: "Excel-Tabelle erstellen"
+  });
+  
+  api.addComposerToolbarPopupMenuOption({
+    id: "nextcloud_powerpoint",
+    action: "createNextcloudPowerPoint",
+    icon: "play", 
+    label: "PowerPoint-Präsentation",
+    title: "PowerPoint-Präsentation erstellen"
   });
 
   // Controller-Aktionen definieren (mit pluginId)
   api.modifyClass("controller:composer", {
     pluginId: "nextcloud-office-integration",
+    actions: {
+      createNextcloudWord() {
+        this.showFileNameModal("docx", "Word Document");
+      },
+      createNextcloudExcel() {
+        this.showFileNameModal("xlsx", "Excel Spreadsheet");
+      },
+      createNextcloudPowerPoint() {
+        this.showFileNameModal("pptx", "PowerPoint Presentation");
+      }
+    },
 
     showFileNameModal(fileType, fileTypeLabel) {
       // Standard-Dateiname generieren (ohne Endung)
