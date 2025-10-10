@@ -44,32 +44,39 @@ export default apiInitializer("1.8.0", (api) => {
     },
     
     showCustomDialog(defaultName, fileType, fileTypeLabel) {
+      // Deutsche Labels basierend auf Dateityp
+      const germanLabels = {
+        "Word Document": "Word-Dokument erstellen",
+        "Excel Spreadsheet": "Excel-Tabelle erstellen", 
+        "PowerPoint Presentation": "PowerPoint-Präsentation erstellen"
+      };
+      
       // Dialog-HTML erstellen
       const dialogHTML = `
         <div class="nextcloud-filename-dialog-overlay">
           <div class="nextcloud-filename-dialog">
             <div class="dialog-header">
-              <h3>Create ${fileTypeLabel}</h3>
+              <h3>${germanLabels[fileTypeLabel] || fileTypeLabel}</h3>
             </div>
             <div class="dialog-body">
-              <label class="dialog-label">File Name:</label>
+              <label class="dialog-label">Dateiname:</label>
               <div class="filename-input-wrapper">
                 <input 
                   type="text" 
                   class="filename-input" 
                   value="${this.escapeHtml(defaultName)}"
-                  placeholder="Enter file name"
+                  placeholder="Dateiname eingeben"
                   autofocus
                 />
                 <span class="filename-extension">.${fileType}</span>
               </div>
               <div class="dialog-instructions">
-                The file extension .${fileType} will be added automatically.
+                Die Dateiendung .${fileType} wird automatisch hinzugefügt.
               </div>
             </div>
             <div class="dialog-footer">
-              <button class="btn btn-primary dialog-confirm">Create File</button>
-              <button class="btn dialog-cancel">Cancel</button>
+              <button class="btn btn-primary dialog-confirm">Datei erstellen</button>
+              <button class="btn dialog-cancel">Abbrechen</button>
             </div>
           </div>
         </div>
@@ -134,16 +141,26 @@ export default apiInitializer("1.8.0", (api) => {
       let topicTitle = "";
       
       try {
-        const topicTitleInput = document.querySelector("#reply-title");
-        if (topicTitleInput && topicTitleInput.value) {
-          topicTitle = topicTitleInput.value.trim();
+        // Verschiedene Selektoren für Topic-Titel versuchen
+        const topicTitleInput = document.querySelector("#reply-title") || 
+                               document.querySelector("input[name='title']") ||
+                               document.querySelector(".topic-title h1") ||
+                               document.querySelector(".fancy-title");
+        
+        if (topicTitleInput) {
+          // Input-Feld oder Text-Inhalt
+          topicTitle = topicTitleInput.value ? topicTitleInput.value.trim() : topicTitleInput.textContent?.trim();
+          
           if (topicTitle) {
             // Titel bereinigen für Dateinamen
-            topicTitle = topicTitle.substring(0, 50).replace(/[^a-zA-Z0-9äöüÄÖÜß\-_\s]/g, "").replace(/\s+/g, "_");
+            topicTitle = topicTitle.substring(0, 50)
+              .replace(/[^a-zA-Z0-9äöüÄÖÜß\-_\s]/g, "")
+              .replace(/\s+/g, "_")
+              .replace(/^_+|_+$/g, ""); // Leading/trailing underscores entfernen
           }
         }
       } catch (e) {
-        // Fallback wird unten gesetzt
+        console.log("Could not extract topic title:", e);
       }
       
       // ISO-Datum generieren (YYYY-MM-DD)
@@ -152,12 +169,13 @@ export default apiInitializer("1.8.0", (api) => {
       
       // Dateiname zusammensetzen: Titel_Datum oder nur Datum falls kein Titel
       let fileName;
-      if (topicTitle) {
+      if (topicTitle && topicTitle.length > 0) {
         fileName = `${topicTitle}_${isoDate}.${fileType}`;
       } else {
         fileName = `Document_${isoDate}.${fileType}`;
       }
       
+      console.log("Generated filename:", fileName, "from topic title:", topicTitle);
       return fileName;
     },
 
