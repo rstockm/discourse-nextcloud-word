@@ -1,29 +1,28 @@
 import { apiInitializer } from "discourse/lib/api";
 
 export default apiInitializer("1.8.0", (api) => {
-  // Popup-Menü-Einträge für das "+" Menü
-  api.addToolbarPopupMenuOptionsCallback(() => {
-    return [
-      {
-        action: "createNextcloudWord",
-        icon: "file",
-        label: "Word-Dokument"
-      },
-      {
-        action: "createNextcloudExcel", 
-        icon: "table",
-        label: "Excel-Tabelle"
-      },
-      {
-        action: "createNextcloudPowerPoint",
-        icon: "play", 
-        label: "PowerPoint-Präsentation"
-      }
-    ];
+  // Popup-Menü-Einträge für das "+" Menü (neue API)
+  api.addComposerToolbarPopupMenuOption({
+    action: "createNextcloudWord",
+    icon: "file",
+    label: "Word-Dokument"
+  });
+  
+  api.addComposerToolbarPopupMenuOption({
+    action: "createNextcloudExcel", 
+    icon: "table",
+    label: "Excel-Tabelle"
+  });
+  
+  api.addComposerToolbarPopupMenuOption({
+    action: "createNextcloudPowerPoint",
+    icon: "play", 
+    label: "PowerPoint-Präsentation"
   });
 
-  // Controller-Aktionen definieren
+  // Controller-Aktionen definieren (mit pluginId)
   api.modifyClass("controller:composer", {
+    pluginId: "nextcloud-office-integration",
     actions: {
       createNextcloudWord() {
         this.createNextcloudDoc("docx");
