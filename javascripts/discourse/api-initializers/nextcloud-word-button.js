@@ -1,38 +1,30 @@
 import { apiInitializer } from "discourse/lib/api";
 
 export default apiInitializer("1.8.0", (api) => {
-  api.onToolbarCreate((toolbar) => {
-    toolbar.addButton({
-      id: "nextcloud_word",
-      group: "extras",
-      icon: "file",
-      title: "Word-Dokument in Nextcloud erstellen",
-      perform: (e) => createNextcloudDoc(e, "docx"),
-    });
-    
-    toolbar.addButton({
-      id: "nextcloud_excel",
-      group: "extras",
-      icon: "table",
-      title: "Excel-Tabelle in Nextcloud erstellen",
-      perform: (e) => createNextcloudDoc(e, "xlsx"),
-    });
-    
-    toolbar.addButton({
-      id: "nextcloud_powerpoint",
-      group: "extras",
-      icon: "play",
-      title: "PowerPoint-Präsentation in Nextcloud erstellen",
-      perform: (e) => createNextcloudDoc(e, "pptx"),
-    });
+  api.addToolbarPopupMenuOptionsCallback(() => {
+    return [
+      {
+        id: "nextcloud_word",
+        icon: "file",
+        label: "Word-Dokument",
+        action: (toolbarEvent) => createNextcloudDoc(toolbarEvent, "docx"),
+      },
+      {
+        id: "nextcloud_excel",
+        icon: "table",
+        label: "Excel-Tabelle",
+        action: (toolbarEvent) => createNextcloudDoc(toolbarEvent, "xlsx"),
+      },
+      {
+        id: "nextcloud_powerpoint",
+        icon: "play",
+        label: "PowerPoint-Präsentation",
+        action: (toolbarEvent) => createNextcloudDoc(toolbarEvent, "pptx"),
+      },
+    ];
   });
 
   async function createNextcloudDoc(toolbarEvent, fileType) {
-    const button = document.querySelector(".nextcloud-office-button");
-    if (button) {
-      button.classList.add("nextcloud-office-loading");
-    }
-
     try {
       // API-URL aus Theme-Settings (neue universelle API)
       const apiUrl = settings.api_url || "https://nextdiscourse.wolkenbar.de/create-office-file.php";
@@ -95,9 +87,8 @@ export default apiInitializer("1.8.0", (api) => {
       console.error("Fehler beim Erstellen der Office-Datei:", error);
       alert(`Fehler beim Erstellen der Office-Datei: ${error.message}`);
     } finally {
-      if (button) {
-        button.classList.remove("nextcloud-office-loading");
-      }
+      // Ladezustands-Logik für Popup-Menü-Einträge ist komplexer
+      // und wird hier vorerst weggelassen
     }
   }
 });

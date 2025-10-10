@@ -1,17 +1,3 @@
-.d-editor-button-bar {
-  .nextcloud-word-button,
-  .nextcloud-excel-button,
-  .nextcloud-powerpoint-button {
-    .d-icon {
-      color: var(--primary-medium);
-    }
-    
-    &:hover .d-icon {
-      color: var(--primary);
-    }
-  }
-}
-
 .nextcloud-office-loading {
   opacity: 0.5;
   pointer-events: none;
