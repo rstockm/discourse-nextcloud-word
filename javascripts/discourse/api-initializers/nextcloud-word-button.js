@@ -5,19 +5,19 @@ export default apiInitializer("1.8.0", (api) => {
   api.addComposerToolbarPopupMenuOption({
     action: "createNextcloudWord",
     icon: "file",
-    label: "Word-Dokument"
+    label: "Word Document"
   });
   
   api.addComposerToolbarPopupMenuOption({
     action: "createNextcloudExcel", 
     icon: "table",
-    label: "Excel-Tabelle"
+    label: "Excel Spreadsheet"
   });
   
   api.addComposerToolbarPopupMenuOption({
     action: "createNextcloudPowerPoint",
     icon: "play", 
-    label: "PowerPoint-Präsentation"
+    label: "PowerPoint Presentation"
   });
 
   // Controller-Aktionen definieren (mit pluginId)
