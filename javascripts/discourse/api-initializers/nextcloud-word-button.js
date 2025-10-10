@@ -3,21 +3,24 @@ import { apiInitializer } from "discourse/lib/api";
 export default apiInitializer("1.8.0", (api) => {
   // Popup-Menü-Einträge für das "+" Menü (neue API)
   api.addComposerToolbarPopupMenuOption({
+    id: "nextcloud_word",
     action: "createNextcloudWord",
     icon: "file",
-    label: "Erstelle Word-Dokument"
+    title: "Word-Dokument erstellen"
   });
   
   api.addComposerToolbarPopupMenuOption({
-    action: "createNextcloudExcel", 
+    id: "nextcloud_excel", 
+    action: "createNextcloudExcel",
     icon: "table",
-    label: "Erstelle Excel-Tabelle"
+    title: "Excel-Tabelle erstellen"
   });
   
   api.addComposerToolbarPopupMenuOption({
+    id: "nextcloud_powerpoint",
     action: "createNextcloudPowerPoint",
     icon: "play", 
-    label: "Erstelle PowerPoint-Präsentation"
+    title: "PowerPoint-Präsentation erstellen"
   });
 
   // Controller-Aktionen definieren (mit pluginId)
