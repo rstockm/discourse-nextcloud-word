@@ -72,7 +72,8 @@ export default apiInitializer("1.8.0", (api) => {
       }
 
       // URL ins Posting einfügen (nur URL für Onebox-Vorschau)
-      const linkText = `\n\n${data.url}\n\n`;
+      // Zusätzlicher Absatz nach URL um Onebox-Vorschau zu triggern
+      const linkText = `\n\n${data.url}\n\n\n`;
       toolbarEvent.addText(linkText);
 
     } catch (error) {
