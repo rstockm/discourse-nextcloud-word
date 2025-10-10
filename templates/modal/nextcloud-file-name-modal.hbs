@@ -8,9 +8,9 @@
         <input 
           type="text" 
           class="input-large" 
-          value={{model.fileName}} 
-          {{on "input" this.updateFileName}}
-          {{on "keydown" this.handleKeyDown}}
+          value={{fileName}} 
+          {{on "input" (action "updateFileName")}}
+          {{on "keydown" (action "handleKeyDown")}}
           placeholder="Enter file name..."
           autofocus
         />
@@ -25,10 +25,10 @@
 <div class="modal-footer">
   <button 
     class="btn btn-primary" 
-    {{on "click" this.confirm}}
-    disabled={{this.isLoading}}
+    {{action "confirm"}}
+    disabled={{isLoading}}
   >
-    {{#if this.isLoading}}
+    {{#if isLoading}}
       Creating...
     {{else}}
       Create File
@@ -37,8 +37,8 @@
   
   <button 
     class="btn" 
-    {{on "click" this.cancel}}
-    disabled={{this.isLoading}}
+    {{action "cancel"}}
+    disabled={{isLoading}}
   >
     Cancel
   </button>
