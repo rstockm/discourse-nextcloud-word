@@ -107,9 +107,25 @@ export default apiInitializer("1.8.0", (api) => {
       };
       
       const confirmAction = () => {
-        const fileName = input.value.trim();
-        if (fileName) {
-          const fullFileName = `${fileName}.${fileType}`;
+        const rawFileName = input.value.trim();
+        if (rawFileName) {
+          // Dateinamen bereinigen
+          const sanitizedFileName = this.sanitizeFileName(rawFileName);
+          const fullFileName = `${sanitizedFileName}.${fileType}`;
+          
+          // Warnung anzeigen wenn der Name geändert wurde
+          if (sanitizedFileName !== rawFileName) {
+            const originalFileName = rawFileName;
+            const modifiedMessage = I18n.t(themePrefix("modal.create_document.filename_sanitized"), {
+              original: originalFileName,
+              sanitized: sanitizedFileName
+            });
+            
+            if (!confirm(modifiedMessage)) {
+              return; // Benutzer bricht ab
+            }
+          }
+          
           closeDialog();
           this.createNextcloudDoc(fileType, fullFileName);
         }
@@ -145,6 +161,29 @@ export default apiInitializer("1.8.0", (api) => {
       return div.innerHTML;
     },
 
+    sanitizeFileName(fileName) {
+      if (!fileName || typeof fileName !== 'string') {
+        return '';
+      }
+      
+      // Dateinamen bereinigen basierend auf Nextcloud/WebDAV Best Practices
+      return fileName
+        // Entferne definitiv problematische Zeichen (verursachen HTTP 500)
+        .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
+        // Entferne Pluszeichen (bekanntes Nextcloud Problem)
+        .replace(/\+/g, '')
+        // Entferne mehrfache Punkte (Sicherheitsrisiko)
+        .replace(/\.{2,}/g, '.')
+        // Entferne führende/nachfolgende Punkte und Leerzeichen
+        .replace(/^[.\s]+|[.\s]+$/g, '')
+        // Ersetze mehrfache Leerzeichen durch einzelne
+        .replace(/\s{2,}/g, ' ')
+        // Begrenze Länge (ohne Dateiendung)
+        .substring(0, 200)
+        // Stelle sicher, dass der Name nicht leer ist
+        .trim() || 'Document';
+    },
+
     generateDefaultFileName(fileType) {
       // Topic-Titel als Basis verwenden
       let topicTitle = "";
@@ -161,11 +200,13 @@ export default apiInitializer("1.8.0", (api) => {
           topicTitle = topicTitleInput.value ? topicTitleInput.value.trim() : topicTitleInput.textContent?.trim();
           
           if (topicTitle) {
-            // Titel bereinigen für Dateinamen
-            topicTitle = topicTitle.substring(0, 50)
-              .replace(/[^a-zA-Z0-9äöüÄÖÜß\-_\s]/g, "")
-              .replace(/\s+/g, "_")
-              .replace(/^_+|_+$/g, ""); // Leading/trailing underscores entfernen
+            // Titel bereinigen - nur problematische Zeichen entfernen, Leerzeichen behalten
+            topicTitle = topicTitle
+              .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
+              .replace(/\.{2,}/g, '.')
+              .replace(/^\.+|\.+$/g, '')
+              .substring(0, 50)
+              .trim();
           }
         }
       } catch (e) {
@@ -198,13 +239,25 @@ export default apiInitializer("1.8.0", (api) => {
         // API-URL aus Theme-Settings
         const apiUrl = settings.api_url || "https://nextdiscourse.wolkenbar.de/create-office-file.php";
 
-        // API-Call zum LAMP-Server
+        // Dateinamen nochmals bereinigen vor API-Call (zusätzliche Sicherheit)
+        const sanitizedFileName = this.sanitizeFileName(fileName.replace(`.${fileType}`, '')) + `.${fileType}`;
+        
+        console.log("Original filename:", fileName);
+        console.log("Sanitized filename:", sanitizedFileName);
+        
+        // API-Call zum LAMP-Server mit URL-Encoding für Dateinamen
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ fileName, fileType }),
+          body: JSON.stringify({ 
+            fileName: sanitizedFileName, 
+            fileType,
+            // Zusätzliche Metadaten für bessere Fehlerbehandlung
+            originalFileName: fileName,
+            timestamp: new Date().toISOString()
+          }),
         });
 
         if (!response.ok) {

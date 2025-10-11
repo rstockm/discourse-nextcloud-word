@@ -20,6 +20,7 @@ en:
       cancel_button: "Cancel"
       creating: "Creating..."
       error_empty: "Please enter a file name."
+      filename_sanitized: "The filename contains problematic characters (e.g. < > : \" \\ | ? * +) and will be changed from '{{original}}' to '{{sanitized}}'. Continue?"
   
   filename:
     default_prefix: "Document"
