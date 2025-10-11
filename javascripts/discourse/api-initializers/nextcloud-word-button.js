@@ -166,22 +166,25 @@ export default apiInitializer("1.8.0", (api) => {
         return '';
       }
       
-      // Dateinamen bereinigen basierend auf Nextcloud/WebDAV Best Practices
+      // Dateinamen bereinigen - nur definitiv problematische Zeichen entfernen
       return fileName
-        // Entferne definitiv problematische Zeichen (verursachen HTTP 500)
+        // Entferne nur gefährliche Pfadseparatoren und Steuerzeichen
         .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
-        // Entferne Pluszeichen (bekanntes Nextcloud Problem)
-        .replace(/\+/g, '')
         // Entferne mehrfache Punkte (Sicherheitsrisiko)
         .replace(/\.{2,}/g, '.')
-        // Entferne führende/nachfolgende Punkte und Leerzeichen
-        .replace(/^[.\s]+|[.\s]+$/g, '')
+        // Entferne führende/nachfolgende Punkte
+        .replace(/^\.+|\.+$/g, '')
         // Ersetze mehrfache Leerzeichen durch einzelne
         .replace(/\s{2,}/g, ' ')
         // Begrenze Länge (ohne Dateiendung)
         .substring(0, 200)
         // Stelle sicher, dass der Name nicht leer ist
         .trim() || 'Document';
+    },
+
+    encodeFileNameForAPI(fileName) {
+      // Für API-Calls: Leerzeichen und andere Sonderzeichen korrekt encodieren
+      return encodeURIComponent(fileName);
     },
 
     generateDefaultFileName(fileType) {
@@ -239,34 +242,87 @@ export default apiInitializer("1.8.0", (api) => {
         // API-URL aus Theme-Settings
         const apiUrl = settings.api_url || "https://nextdiscourse.wolkenbar.de/create-office-file.php";
 
-        // Dateinamen nochmals bereinigen vor API-Call (zusätzliche Sicherheit)
+        // Dateinamen bereinigen vor API-Call
         const sanitizedFileName = this.sanitizeFileName(fileName.replace(`.${fileType}`, '')) + `.${fileType}`;
         
         console.log("Original filename:", fileName);
         console.log("Sanitized filename:", sanitizedFileName);
         
-        // API-Call zum LAMP-Server mit URL-Encoding für Dateinamen
-        const response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ 
-            fileName: sanitizedFileName, 
-            fileType,
-            // Zusätzliche Metadaten für bessere Fehlerbehandlung
-            originalFileName: fileName,
-            timestamp: new Date().toISOString()
-          }),
-        });
+        // API-Call zum LAMP-Server - verschiedene Encoding-Methoden versuchen
+        let response;
+        
+        try {
+          // Methode 1: Standard JSON (sollte funktionieren)
+          response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ 
+              fileName: sanitizedFileName, 
+              fileType,
+              originalFileName: fileName,
+              timestamp: new Date().toISOString(),
+              encodingMethod: 'json'
+            }),
+          });
+        } catch (error) {
+          console.log("JSON method failed, trying FormData:", error);
+          
+          try {
+            // Methode 2: Form Data (für problematische Zeichen)
+            const formData = new FormData();
+            formData.append('fileName', sanitizedFileName);
+            formData.append('fileType', fileType);
+            formData.append('originalFileName', fileName);
+            formData.append('timestamp', new Date().toISOString());
+            formData.append('encodingMethod', 'formdata');
+            
+            response = await fetch(apiUrl, {
+              method: "POST",
+              body: formData
+            });
+          } catch (error2) {
+            console.log("FormData method failed, trying URL encoding:", error2);
+            
+            // Methode 3: URL-encoded Parameters (für extreme Fälle)
+            const params = new URLSearchParams();
+            params.append('fileName', sanitizedFileName);
+            params.append('fileType', fileType);
+            params.append('originalFileName', fileName);
+            params.append('timestamp', new Date().toISOString());
+            params.append('encodingMethod', 'urlencoded');
+            
+            response = await fetch(apiUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: params.toString()
+            });
+          }
+        }
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          // Erweiterte Fehlerdiagnose
+          const errorText = await response.text();
+          console.error("API Error Response:", errorText);
+          
+          // Versuche JSON-Parsing für strukturierte Fehlermeldungen
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { error: errorText };
+          }
+          
+          throw new Error(`HTTP ${response.status}: ${errorData.error || errorText}`);
         }
 
         const data = await response.json();
 
         if (!data.success || !data.url) {
+          console.error("API Success Response:", data);
           throw new Error(data.error || "Unbekannter Fehler");
         }
 
