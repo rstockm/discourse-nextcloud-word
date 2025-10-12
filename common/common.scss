@@ -15,6 +15,26 @@
   align-items: center;
   justify-content: center;
   z-index: 9999;
+  
+  // Mobile-spezifische Anpassungen
+  @media (max-width: 768px) {
+    align-items: flex-start;
+    padding-top: 5vh; // Dialog weiter oben positionieren
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 2rem;
+    overflow-y: auto; // Scrollen ermöglichen falls nötig
+    
+    // Spezielle Behandlung für Geräte mit virtueller Tastatur
+    @supports (height: 100dvh) {
+      height: 100dvh; // Dynamische Viewport-Höhe
+    }
+    
+    // Fallback für ältere Browser
+    @supports not (height: 100dvh) {
+      height: 100vh;
+    }
+  }
 }
 
 .nextcloud-filename-dialog {
@@ -23,6 +43,15 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   max-width: 500px;
   width: 90%;
+  
+  // Mobile-spezifische Anpassungen
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    max-height: 80vh; // Maximale Höhe für Mobile
+    overflow-y: auto; // Scrollen falls Inhalt zu groß
+  }
   
   .dialog-header {
     padding: 1.5em;
@@ -91,11 +120,27 @@
     gap: 0.5em;
     justify-content: flex-end;
     
+    // Mobile-spezifische Button-Anpassungen
+    @media (max-width: 768px) {
+      padding: 1.25em 1.5em;
+      gap: 0.75em;
+      justify-content: stretch; // Buttons über volle Breite
+      flex-direction: column-reverse; // "Fertig" Button oben für besseren Zugriff
+    }
+    
     .btn {
       padding: 0.5em 1.25em;
       border-radius: var(--d-border-radius);
       cursor: pointer;
       font-weight: 500;
+      
+      // Mobile-spezifische Button-Größen
+      @media (max-width: 768px) {
+        padding: 0.875em 1.5em;
+        font-size: 1.1em;
+        min-height: 48px; // Mindestgröße für Touch-Bedienung
+        width: 100%; // Volle Breite auf Mobile
+      }
       
       &.btn-primary {
         background: var(--tertiary);
