@@ -17,7 +17,7 @@ de:
       filename_placeholder: "Dateiname eingeben"
       extension_info: "Die Dateiendung .{{ext}} wird automatisch hinzugefügt."
       confirm_button: "Datei erstellen"
-      cancel_button: "Abbrechen"
+      close_button: "Schließen"
       creating: "Erstelle..."
       error_empty: "Bitte geben Sie einen Dateinamen ein."
       filename_sanitized: "Der Dateiname enthält problematische Zeichen (z.B. < > : \" \\ | ? * +) und wird von '{{original}}' zu '{{sanitized}}' geändert. Fortfahren?"

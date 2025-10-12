@@ -66,6 +66,9 @@ export default apiInitializer("1.8.0", (api) => {
           <div class="nextcloud-filename-dialog">
             <div class="dialog-header">
               <h3>${heading}</h3>
+              <button class="dialog-close" title="${I18n.t(themePrefix("modal.create_document.close_button"))}">
+                <span class="close-icon">×</span>
+              </button>
             </div>
             <div class="dialog-body">
               <label class="dialog-label">${I18n.t(themePrefix("modal.create_document.filename_label"))}:</label>
@@ -85,7 +88,6 @@ export default apiInitializer("1.8.0", (api) => {
             </div>
             <div class="dialog-footer">
               <button class="btn btn-primary dialog-confirm">${I18n.t(themePrefix("modal.create_document.confirm_button"))}</button>
-              <button class="btn dialog-cancel">${I18n.t(themePrefix("modal.create_document.cancel_button"))}</button>
             </div>
           </div>
         </div>
@@ -100,7 +102,7 @@ export default apiInitializer("1.8.0", (api) => {
       const overlay = dialogElement.querySelector('.nextcloud-filename-dialog-overlay');
       const input = dialogElement.querySelector('.filename-input');
       const confirmBtn = dialogElement.querySelector('.dialog-confirm');
-      const cancelBtn = dialogElement.querySelector('.dialog-cancel');
+      const closeBtn = dialogElement.querySelector('.dialog-close');
       
       const closeDialog = () => {
         document.body.removeChild(dialogElement);
@@ -141,7 +143,7 @@ export default apiInitializer("1.8.0", (api) => {
       });
       
       confirmBtn.addEventListener('click', confirmAction);
-      cancelBtn.addEventListener('click', closeDialog);
+      closeBtn.addEventListener('click', closeDialog);
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
           closeDialog();

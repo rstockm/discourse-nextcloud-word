@@ -17,7 +17,7 @@ en:
       filename_placeholder: "Enter file name..."
       extension_info: "The file extension .{{ext}} will be added automatically."
       confirm_button: "Create File"
-      cancel_button: "Cancel"
+      close_button: "Close"
       creating: "Creating..."
       error_empty: "Please enter a file name."
       filename_sanitized: "The filename contains problematic characters (e.g. < > : \" \\ | ? * +) and will be changed from '{{original}}' to '{{sanitized}}'. Continue?"
