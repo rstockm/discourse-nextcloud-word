@@ -1,11 +1,11 @@
 # Discourse Nextcloud Word Integration
 
-Eine Discourse Theme Component, die das Erstellen von Word-Dokumenten in Nextcloud direkt aus dem Discourse Composer ermöglicht.
+Eine Discourse Theme Component, die das Erstellen von Office-Dokumenten in Nextcloud direkt aus dem Discourse Composer ermöglicht.
 
 ## Features
 
-- ✅ Button "Word-Datei" im Discourse Composer
-- ✅ Erstellt .docx-Dateien in Nextcloud
+- ✅ Button "Word/EXCEL/PowerPoint-Datei" im Discourse Composer
+- ✅ Erstellt .docx/.xlsx./pptx-Dateien in Nextcloud
 - ✅ Fügt bearbeitbaren Share-Link ins Posting ein
 - ✅ Automatische Dateinamengenerierung aus Topic-Titel
 - ✅ Konfigurierbare API-URL via Theme-Settings
