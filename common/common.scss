@@ -103,6 +103,10 @@
       font-weight: 600;
       margin-bottom: 0.5em;
       color: var(--primary);
+      
+      &.password-label {
+        margin-top: 1.5em;
+      }
     }
     
     .filename-input-wrapper {
@@ -141,6 +145,31 @@
       margin-top: 0.5em;
       font-size: 0.875em;
       color: var(--primary-medium);
+    }
+    
+    .password-input-wrapper {
+      display: flex;
+      align-items: center;
+      border: 2px solid var(--primary-low);
+      border-radius: var(--d-border-radius);
+      overflow: hidden;
+      transition: border-color 0.2s;
+      margin-top: 0.5em;
+      
+      &:focus-within {
+        border-color: var(--tertiary);
+      }
+      
+      .password-input {
+        flex: 1;
+        padding: 0.75em;
+        border: none;
+        background: var(--secondary);
+        color: var(--primary);
+        font-size: 1em;
+        outline: none;
+        font-family: inherit;
+      }
     }
   }
   

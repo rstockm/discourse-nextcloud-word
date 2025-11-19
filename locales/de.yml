@@ -21,6 +21,9 @@ de:
       creating: "Erstelle..."
       error_empty: "Bitte geben Sie einen Dateinamen ein."
       filename_sanitized: "Der Dateiname enthält problematische Zeichen (z.B. < > : \" \\ | ? * +) und wird von '{{original}}' zu '{{sanitized}}' geändert. Fortfahren?"
+      password_label: "Passwort (optional)"
+      password_placeholder: "Leer lassen für URL-basierten Zugriff"
+      password_info: "Mit Passwort: Lese-/Schreibrechte nur mit Passwort. Ohne Passwort: Lese-/Schreibrechte über URL (Security by Obscurity)."
   
   filename:
     default_prefix: "Dokument"

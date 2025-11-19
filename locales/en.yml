@@ -21,6 +21,9 @@ en:
       creating: "Creating..."
       error_empty: "Please enter a file name."
       filename_sanitized: "The filename contains problematic characters (e.g. < > : \" \\ | ? * +) and will be changed from '{{original}}' to '{{sanitized}}'. Continue?"
+      password_label: "Password (optional)"
+      password_placeholder: "Leave empty for URL-based access"
+      password_info: "With password: Read/write access only with password. Without password: Read/write access via URL (Security by Obscurity)."
   
   filename:
     default_prefix: "Document"

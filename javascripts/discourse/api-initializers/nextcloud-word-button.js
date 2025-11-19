@@ -85,6 +85,18 @@ export default apiInitializer("1.8.0", (api) => {
               <div class="dialog-instructions">
                 ${I18n.t(themePrefix("modal.create_document.extension_info"), { ext: fileType })}
               </div>
+              
+              <label class="dialog-label password-label">${I18n.t(themePrefix("modal.create_document.password_label"))}:</label>
+              <div class="password-input-wrapper">
+                <input 
+                  type="password" 
+                  class="password-input" 
+                  placeholder="${I18n.t(themePrefix("modal.create_document.password_placeholder"))}"
+                />
+              </div>
+              <div class="dialog-instructions">
+                ${I18n.t(themePrefix("modal.create_document.password_info"))}
+              </div>
             </div>
             <div class="dialog-footer">
               <button class="btn btn-primary dialog-confirm">${I18n.t(themePrefix("modal.create_document.confirm_button"))}</button>
@@ -101,6 +113,7 @@ export default apiInitializer("1.8.0", (api) => {
       // Event-Listener
       const overlay = dialogElement.querySelector('.nextcloud-filename-dialog-overlay');
       const input = dialogElement.querySelector('.filename-input');
+      const passwordInput = dialogElement.querySelector('.password-input');
       const confirmBtn = dialogElement.querySelector('.dialog-confirm');
       const closeBtn = dialogElement.querySelector('.dialog-close');
       
@@ -128,19 +141,26 @@ export default apiInitializer("1.8.0", (api) => {
             }
           }
           
+          // Passwort-Wert auslesen (kann leer sein)
+          const sharePassword = passwordInput.value.trim();
+          
           closeDialog();
-          this.createNextcloudDoc(fileType, fullFileName);
+          this.createNextcloudDoc(fileType, fullFileName, sharePassword);
         }
       };
       
-      // Enter-Taste für Bestätigung
-      input.addEventListener('keydown', (e) => {
+      // Enter-Taste für Bestätigung (in beiden Input-Feldern)
+      const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
+          e.preventDefault();
           confirmAction();
         } else if (e.key === 'Escape') {
           closeDialog();
         }
-      });
+      };
+      
+      input.addEventListener('keydown', handleKeyDown);
+      passwordInput.addEventListener('keydown', handleKeyDown);
       
       confirmBtn.addEventListener('click', confirmAction);
       closeBtn.addEventListener('click', closeDialog);
@@ -235,11 +255,11 @@ export default apiInitializer("1.8.0", (api) => {
       return fileName;
     },
 
-    createNextcloudDoc(fileType, fileName) {
-      this.createNextcloudDocAsync(fileType, fileName);
+    createNextcloudDoc(fileType, fileName, sharePassword = '') {
+      this.createNextcloudDocAsync(fileType, fileName, sharePassword);
     },
 
-    async createNextcloudDocAsync(fileType, fileName) {
+    async createNextcloudDocAsync(fileType, fileName, sharePassword = '') {
       try {
         // API-URL aus Theme-Settings
         const apiUrl = settings.api_url || "https://nextdiscourse.wolkenbar.de/create-office-file.php";
@@ -249,6 +269,11 @@ export default apiInitializer("1.8.0", (api) => {
         
         console.log("Original filename:", fileName);
         console.log("Sanitized filename:", sanitizedFileName);
+        console.log("Share password:", sharePassword ? "***" : "(none)");
+        
+        // Backend-Hinweis: 
+        // - Mit Passwort: permissions = 3 (read + write) + password-Schutz
+        // - Ohne Passwort: permissions = 3 (read + write) - wie bisher, nur URL-basiert
         
         // API-Call zum LAMP-Server - verschiedene Encoding-Methoden versuchen
         let response;
@@ -264,6 +289,7 @@ export default apiInitializer("1.8.0", (api) => {
               fileName: sanitizedFileName, 
               fileType,
               originalFileName: fileName,
+              sharePassword: sharePassword || null, // null wenn leer, sonst Passwort
               timestamp: new Date().toISOString(),
               encodingMethod: 'json'
             }),
@@ -277,6 +303,7 @@ export default apiInitializer("1.8.0", (api) => {
             formData.append('fileName', sanitizedFileName);
             formData.append('fileType', fileType);
             formData.append('originalFileName', fileName);
+            formData.append('sharePassword', sharePassword || '');
             formData.append('timestamp', new Date().toISOString());
             formData.append('encodingMethod', 'formdata');
             
@@ -292,6 +319,7 @@ export default apiInitializer("1.8.0", (api) => {
             params.append('fileName', sanitizedFileName);
             params.append('fileType', fileType);
             params.append('originalFileName', fileName);
+            params.append('sharePassword', sharePassword || '');
             params.append('timestamp', new Date().toISOString());
             params.append('encodingMethod', 'urlencoded');
             
