@@ -25,8 +25,49 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+function getRequestInput() {
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+
+    if (stripos($contentType, 'application/json') !== false) {
+        $jsonInput = json_decode(file_get_contents('php://input'), true);
+        if (is_array($jsonInput)) {
+            return $jsonInput;
+        }
+    }
+
+    return $_POST;
+}
+
+function sanitizeFileName($fileName) {
+    $fileName = trim((string)$fileName);
+    $fileName = preg_replace('/[<>:"\/\\\\|?*\x00-\x1f]/', '', $fileName);
+    $fileName = preg_replace('/\.{2,}/', '.', $fileName);
+    $fileName = trim($fileName, ". \t\n\r\0\x0B");
+    $fileName = preg_replace('/\s{2,}/', ' ', $fileName);
+    $fileName = substr($fileName, 0, 200);
+
+    return trim($fileName) ?: 'Document';
+}
+
+function buildNextcloudPath($targetFolder, $fileName) {
+    $path = trim((string)$targetFolder . '/' . (string)$fileName, '/');
+    $segments = array_filter(array_map('trim', explode('/', $path)), function ($segment) {
+        return $segment !== '';
+    });
+
+    return '/' . implode('/', $segments);
+}
+
+function encodePathForWebDav($path) {
+    $segments = array_filter(explode('/', trim($path, '/')), function ($segment) {
+        return $segment !== '';
+    });
+
+    return implode('/', array_map('rawurlencode', $segments));
+}
+
 // Request-Daten
-$input = json_decode(file_get_contents('php://input'), true);
+$input = getRequestInput();
 $fileType = $input['fileType'] ?? 'docx'; // docx, xlsx, pptx
 $fileName = $input['fileName'] ?? null;
 // Passwort-Parameter: null oder leerer String werden zu leerem String normalisiert
@@ -49,6 +90,8 @@ if (!in_array($fileType, $validTypes)) {
 if (!$fileName) {
     $fileName = FILE_PREFIX . date('Y-m-d_H-i-s') . '.' . $fileType;
 } else {
+    $fileName = sanitizeFileName($fileName);
+
     // Sicherstellen, dass korrekte Extension vorhanden ist
     if (!str_ends_with($fileName, '.' . $fileType)) {
         $fileName .= '.' . $fileType;
@@ -64,8 +107,8 @@ if (!file_exists($templatePath)) {
 }
 
 // WebDAV-URL zum Hochladen
-$filePath = NEXTCLOUD_TARGET_FOLDER . '/' . $fileName;
-$webdavUrl = NEXTCLOUD_URL . '/remote.php/dav/files/' . NEXTCLOUD_USERNAME . $filePath;
+$filePath = buildNextcloudPath(NEXTCLOUD_TARGET_FOLDER, $fileName);
+$webdavUrl = NEXTCLOUD_URL . '/remote.php/dav/files/' . rawurlencode(NEXTCLOUD_USERNAME) . '/' . encodePathForWebDav($filePath);
 
 // Datei erstellen via WebDAV
 $ch = curl_init();

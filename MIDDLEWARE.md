@@ -68,7 +68,7 @@ Discourse Composer
 
 ## Request vom Frontend
 
-Das Frontend sendet einen JSON-Request an die in `settings.yml` konfigurierte `api_url`.
+Das Frontend sendet bevorzugt einen JSON-Request an die in `settings.yml` konfigurierte `api_url`. Die Middleware kann zusätzlich `FormData` und `application/x-www-form-urlencoded` lesen, passend zu den vorhandenen Frontend-Fallbacks.
 
 ```json
 {
@@ -138,7 +138,7 @@ define('FILE_PREFIX', 'Dokument_');
 Die Middleware bestimmt zuerst den finalen Dateinamen:
 
 1. Wenn kein `fileName` gesendet wurde, wird ein Name aus `FILE_PREFIX`, Datum/Uhrzeit und `fileType` erzeugt.
-2. Wenn ein `fileName` gesendet wurde, stellt die Middleware sicher, dass die passende Dateiendung vorhanden ist.
+2. Wenn ein `fileName` gesendet wurde, bereinigt die Middleware den Namen serverseitig und stellt sicher, dass die passende Dateiendung vorhanden ist.
 3. Der Dateityp wird gegen `docx`, `xlsx` und `pptx` validiert.
 
 Danach sucht die Middleware eine lokale Template-Datei:
@@ -149,7 +149,18 @@ template.xlsx
 template.pptx
 ```
 
-Die passende Template-Datei wird per WebDAV `PUT` nach Nextcloud hochgeladen. Der Zielpfad wird aus `NEXTCLOUD_TARGET_FOLDER` und `fileName` zusammengesetzt.
+Die passende Template-Datei wird per WebDAV `PUT` nach Nextcloud hochgeladen. Der interne Zielpfad wird aus `NEXTCLOUD_TARGET_FOLDER` und `fileName` zusammengesetzt.
+
+## Pfad-Encoding
+
+Die Middleware trennt den internen Nextcloud-Pfad bewusst von der WebDAV-URL:
+
+- Der interne Nextcloud-Pfad bleibt lesbar, zum Beispiel `/Meine Kategorie/Mein Dokument.docx`.
+- Fuer die WebDAV-URL werden Benutzername und jedes Pfadsegment einzeln mit `rawurlencode()` encodiert.
+- Slashes zwischen Ordnern bleiben erhalten und werden nicht zu `%2F`.
+- Der OCS-Share-Parameter `path` bleibt der normale, nicht URL-encodierte Nextcloud-Pfad.
+
+Dadurch funktionieren Leerzeichen und Umlaute in Dateinamen sowie in Ordner- oder Kategorienamen, ohne dass Nextcloud einen falsch zusammengesetzten WebDAV-Pfad bekommt.
 
 Erlaubte Erfolgsstatus der WebDAV-Erstellung:
 
@@ -227,8 +238,8 @@ Wichtige Sicherheitsannahmen und Grenzen:
 - Nextcloud-Zugangsdaten liegen serverseitig in `config.php` und werden nicht an Discourse ausgeliefert.
 - Der oeffentliche Share erhaelt immer Lese- und Schreibrechte (`permissions = 3`).
 - Ohne `sharePassword` ist der Link nur durch die nicht erratbare URL geschuetzt.
-- Die Frontend-Dateinamenbereinigung entfernt problematische Pfad- und Steuerzeichen, ersetzt aber keine serverseitige Validierung.
-- `fileName` wird serverseitig aktuell nicht erneut bereinigt, sondern nur um die Endung ergaenzt.
+- Die Frontend-Dateinamenbereinigung entfernt problematische Pfad- und Steuerzeichen fuer die Benutzerfuehrung.
+- Die Middleware bereinigt `fileName` zusaetzlich serverseitig und erlaubt dabei einfache Leerzeichen.
 
 ## Betrieb und Deployment
 
