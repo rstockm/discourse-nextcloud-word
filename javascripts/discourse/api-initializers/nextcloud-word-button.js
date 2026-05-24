@@ -191,10 +191,20 @@ export default apiInitializer("1.8.0", (api) => {
 
       const data = await response.json();
       if (data.success && data.url) {
+        if (composerController && composerController.model) {
+          composerController.model.appendText(`\n\n[DEBUG] PHP Middleware success: ${data.url}\n\n`);
+        }
         replaceUploadedMarkdown(upload, data.url);
+      } else {
+        if (composerController && composerController.model) {
+          composerController.model.appendText(`\n\n[DEBUG] PHP Middleware returned success=false or no url: ${JSON.stringify(data)}\n\n`);
+        }
       }
     } catch (error) {
       console.warn("Nextcloud upload sync failed:", error);
+      if (composerController && composerController.model) {
+        composerController.model.appendText(`\n\n[DEBUG] Exception in syncUploadedOfficeFile: ${error.message}\n\n`);
+      }
     }
   };
 
