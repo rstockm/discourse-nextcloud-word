@@ -42,13 +42,56 @@ export default apiInitializer("1.8.0", (api) => {
     return extension?.toString().toLowerCase().replace(/^\./, "");
   };
 
-  const absoluteUploadUrl = (upload) => {
-    const uploadUrl = upload.url || upload.short_url;
-    if (!uploadUrl || uploadUrl.startsWith("upload://")) {
+  const isDownloadableUploadUrl = (uploadUrl) => {
+    return uploadUrl && !uploadUrl.startsWith("upload://") && uploadUrl !== "/404";
+  };
+
+  const absoluteUrl = (url) => new URL(url, window.location.origin).toString();
+
+  const csrfToken = () => document.querySelector("meta[name='csrf-token']")?.content;
+
+  const lookupUploadUrl = async (shortUrl) => {
+    if (!shortUrl?.startsWith("upload://")) {
       return null;
     }
 
-    return new URL(uploadUrl, window.location.origin).toString();
+    const headers = {
+      "Content-Type": "application/json"
+    };
+    const token = csrfToken();
+    if (token) {
+      headers["X-CSRF-Token"] = token;
+    }
+
+    const response = await fetch("/uploads/lookup-urls", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ short_urls: [shortUrl] })
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const uploads = await response.json();
+    const resolvedUpload = uploads?.[0];
+    const resolvedUrl = isDownloadableUploadUrl(resolvedUpload?.url)
+      ? resolvedUpload?.url
+      : resolvedUpload?.short_path;
+
+    return isDownloadableUploadUrl(resolvedUrl) ? absoluteUrl(resolvedUrl) : null;
+  };
+
+  const absoluteUploadUrl = async (upload) => {
+    const candidates = [upload.url, upload.short_path];
+
+    for (const candidate of candidates) {
+      if (isDownloadableUploadUrl(candidate)) {
+        return absoluteUrl(candidate);
+      }
+    }
+
+    return lookupUploadUrl(upload.short_url);
   };
 
   const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -90,7 +133,7 @@ export default apiInitializer("1.8.0", (api) => {
       return;
     }
 
-    const downloadUrl = absoluteUploadUrl(upload);
+    const downloadUrl = await absoluteUploadUrl(upload);
     if (!downloadUrl) {
       console.warn("Nextcloud upload sync skipped: no downloadable upload URL", upload);
       return;
