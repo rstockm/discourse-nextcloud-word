@@ -26,6 +26,112 @@ export default apiInitializer("1.8.0", (api) => {
     title: I18n.t(themePrefix("composer.powerpoint_presentation.title"))
   });
 
+  const configuredUploadExtensions = () => {
+    const configured = settings.nextcloud_upload_extensions;
+    const extensions = Array.isArray(configured)
+      ? configured
+      : (configured || "docx|xlsx|pptx|odt|ods|odp").split("|");
+
+    return extensions
+      .map((extension) => extension.toString().trim().toLowerCase().replace(/^\./, ""))
+      .filter(Boolean);
+  };
+
+  const uploadExtension = (upload) => {
+    const extension = upload.extension || upload.original_filename?.split(".").pop();
+    return extension?.toString().toLowerCase().replace(/^\./, "");
+  };
+
+  const absoluteUploadUrl = (upload) => {
+    const uploadUrl = upload.url || upload.short_url;
+    if (!uploadUrl || uploadUrl.startsWith("upload://")) {
+      return null;
+    }
+
+    return new URL(uploadUrl, window.location.origin).toString();
+  };
+
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const findUploadMarkdown = (reply, upload) => {
+    const candidates = [upload.short_url, upload.url].filter(Boolean);
+
+    for (const candidate of candidates) {
+      const markdownMatch = reply.match(
+        new RegExp(`!?\\[[^\\]\\n]+\\]\\(${escapeRegExp(candidate)}\\)`)
+      );
+
+      if (markdownMatch) {
+        return markdownMatch[0];
+      }
+    }
+
+    return null;
+  };
+
+  const replaceUploadedMarkdown = (upload, nextcloudUrl) => {
+    const composerController = api.container.lookup("controller:composer");
+    const composerModel = composerController?.model;
+    const reply = composerModel?.reply || composerModel?.get?.("reply") || "";
+    const originalMarkdown = findUploadMarkdown(reply, upload);
+
+    if (!originalMarkdown) {
+      return;
+    }
+
+    api.container
+      .lookup("service:app-events")
+      .trigger("composer:replace-text", originalMarkdown, nextcloudUrl);
+  };
+
+  const syncUploadedOfficeFile = async (upload) => {
+    const extension = uploadExtension(upload);
+    if (!configuredUploadExtensions().includes(extension)) {
+      return;
+    }
+
+    const downloadUrl = absoluteUploadUrl(upload);
+    if (!downloadUrl) {
+      console.warn("Nextcloud upload sync skipped: no downloadable upload URL", upload);
+      return;
+    }
+
+    const apiUrl = settings.api_url || "https://nextdiscourse.wolkenbar.de/create-office-file.php";
+    const fileName = upload.original_filename || upload.filename || `Document.${extension}`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileName,
+          fileType: extension,
+          downloadUrl,
+          timestamp: new Date().toISOString(),
+          encodingMethod: "json"
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn("Nextcloud upload sync failed:", response.status, await response.text());
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success && data.url) {
+        replaceUploadedMarkdown(upload, data.url);
+      }
+    } catch (error) {
+      console.warn("Nextcloud upload sync failed:", error);
+    }
+  };
+
+  api.addComposerUploadMarkdownResolver((upload) => {
+    syncUploadedOfficeFile(upload);
+  });
+
   // Controller-Aktionen definieren (mit pluginId)
   api.modifyClass("controller:composer", {
     pluginId: "nextcloud-office-integration",

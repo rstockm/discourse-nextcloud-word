@@ -66,10 +66,207 @@ function encodePathForWebDav($path) {
     return implode('/', array_map('rawurlencode', $segments));
 }
 
+function sendJsonError($statusCode, $payload, $cleanupPath = null) {
+    if ($cleanupPath && file_exists($cleanupPath)) {
+        @unlink($cleanupPath);
+    }
+
+    http_response_code($statusCode);
+    echo json_encode($payload);
+    exit;
+}
+
+function maxDownloadBytes() {
+    return defined('MAX_DOWNLOAD_BYTES') ? (int)MAX_DOWNLOAD_BYTES : 25 * 1024 * 1024;
+}
+
+function allowedDownloadHosts() {
+    return defined('ALLOWED_DOWNLOAD_HOSTS')
+        ? array_map('strtolower', ALLOWED_DOWNLOAD_HOSTS)
+        : [];
+}
+
+function isPrivateOrReservedHost($host) {
+    $ips = filter_var($host, FILTER_VALIDATE_IP) ? [$host] : gethostbynamel($host);
+    if (!$ips) {
+        return true;
+    }
+
+    foreach ($ips as $ip) {
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function validateDownloadUrl($url) {
+    $parts = parse_url($url);
+    if (!is_array($parts)) {
+        throw new RuntimeException('Download-URL ist ungültig');
+    }
+
+    $host = strtolower($parts['host'] ?? '');
+    $allowedHosts = allowedDownloadHosts();
+
+    if (($parts['scheme'] ?? '') !== 'https' || !$host) {
+        throw new RuntimeException('Download-URL muss HTTPS verwenden');
+    }
+
+    if (!$allowedHosts || !in_array($host, $allowedHosts, true)) {
+        throw new RuntimeException('Download-Host ist nicht erlaubt');
+    }
+
+    if (isPrivateOrReservedHost($host)) {
+        throw new RuntimeException('Download-Host zeigt auf eine private oder reservierte IP');
+    }
+}
+
+function resolveRedirectUrl($currentUrl, $location) {
+    if (parse_url($location, PHP_URL_SCHEME)) {
+        return $location;
+    }
+
+    $parts = parse_url($currentUrl);
+    $scheme = $parts['scheme'];
+    $host = $parts['host'];
+    $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+
+    if (str_starts_with($location, '/')) {
+        return $scheme . '://' . $host . $port . $location;
+    }
+
+    $path = $parts['path'] ?? '/';
+    $directory = preg_replace('#/[^/]*$#', '/', $path);
+
+    return $scheme . '://' . $host . $port . $directory . $location;
+}
+
+function downloadFileFromAllowedUrl($url) {
+    validateDownloadUrl($url);
+
+    $currentUrl = $url;
+    $maxRedirects = 3;
+    $maxBytes = maxDownloadBytes();
+
+    for ($redirect = 0; $redirect <= $maxRedirects; $redirect++) {
+        $tempPath = tempnam(sys_get_temp_dir(), 'nextcloud_upload_');
+        if (!$tempPath) {
+            throw new RuntimeException('Temporäre Datei konnte nicht erstellt werden');
+        }
+
+        $handle = fopen($tempPath, 'wb');
+        $headers = [];
+        $bytes = 0;
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $currentUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'discourse-nextcloud-word/1.0');
+        curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($ch, $header) use (&$headers) {
+            $length = strlen($header);
+            $header = trim($header);
+            if ($header !== '' && strpos($header, ':') !== false) {
+                [$name, $value] = explode(':', $header, 2);
+                $headers[strtolower(trim($name))] = trim($value);
+            }
+            return $length;
+        });
+        curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($ch, $data) use ($handle, &$bytes, $maxBytes) {
+            $length = strlen($data);
+            $bytes += $length;
+            if ($bytes > $maxBytes) {
+                return 0;
+            }
+            return fwrite($handle, $data);
+        });
+
+        curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        fclose($handle);
+
+        if ($httpCode >= 300 && $httpCode < 400 && isset($headers['location'])) {
+            @unlink($tempPath);
+            $currentUrl = resolveRedirectUrl($currentUrl, $headers['location']);
+            validateDownloadUrl($currentUrl);
+            continue;
+        }
+
+        if ($curlError) {
+            @unlink($tempPath);
+            throw new RuntimeException('Download fehlgeschlagen: ' . $curlError);
+        }
+
+        if ($httpCode !== 200) {
+            @unlink($tempPath);
+            throw new RuntimeException('Download fehlgeschlagen mit HTTP ' . $httpCode);
+        }
+
+        if ($bytes > $maxBytes) {
+            @unlink($tempPath);
+            throw new RuntimeException('Datei überschreitet die maximale Downloadgröße');
+        }
+
+        return [
+            'path' => $tempPath,
+            'contentType' => $headers['content-type'] ?? null,
+            'bytes' => $bytes
+        ];
+    }
+
+    throw new RuntimeException('Zu viele Redirects beim Download');
+}
+
+function validateDownloadedFile($path, $fileType, $contentType = null) {
+    $fileTypeMimes = [
+        'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+        'odt' => ['application/vnd.oasis.opendocument.text'],
+        'ods' => ['application/vnd.oasis.opendocument.spreadsheet'],
+        'odp' => ['application/vnd.oasis.opendocument.presentation']
+    ];
+    $genericOfficeMimes = [
+        'application/zip',
+        'application/octet-stream'
+    ];
+
+    $isAllowedMime = function ($mimeType) use ($fileType, $fileTypeMimes, $genericOfficeMimes) {
+        return in_array($mimeType, $fileTypeMimes[$fileType] ?? [], true)
+            || in_array($mimeType, $genericOfficeMimes, true);
+    };
+
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $detectedType = $finfo ? finfo_file($finfo, $path) : null;
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+
+        if ($detectedType && !$isAllowedMime($detectedType)) {
+            throw new RuntimeException('Ungültiger Dateiinhalt: ' . $detectedType);
+        }
+    } elseif ($contentType) {
+        $contentType = strtolower(trim(explode(';', $contentType)[0]));
+        if ($contentType && !$isAllowedMime($contentType)) {
+            throw new RuntimeException('Ungültiger Content-Type: ' . $contentType);
+        }
+    }
+}
+
 // Request-Daten
 $input = getRequestInput();
 $fileType = $input['fileType'] ?? 'docx'; // docx, xlsx, pptx
 $fileName = $input['fileName'] ?? null;
+$downloadUrl = isset($input['downloadUrl']) ? trim($input['downloadUrl']) : '';
 // Passwort-Parameter: null oder leerer String werden zu leerem String normalisiert
 $sharePassword = isset($input['sharePassword']) && $input['sharePassword'] !== null 
     ? trim($input['sharePassword']) 
@@ -79,7 +276,9 @@ $sharePassword = isset($input['sharePassword']) && $input['sharePassword'] !== n
 error_log("Nextcloud API Call - FileType: $fileType, FileName: $fileName, HasPassword: " . (!empty($sharePassword) ? 'yes' : 'no'));
 
 // Validierung des Dateityps
-$validTypes = ['docx', 'xlsx', 'pptx'];
+$validTypes = $downloadUrl
+    ? ['docx', 'xlsx', 'pptx', 'odt', 'ods', 'odp']
+    : ['docx', 'xlsx', 'pptx'];
 if (!in_array($fileType, $validTypes)) {
     http_response_code(400);
     echo json_encode(['error' => 'Ungültiger Dateityp']);
@@ -98,12 +297,29 @@ if (!$fileName) {
     }
 }
 
-// Pfad zur Template-Datei
-$templatePath = __DIR__ . '/template.' . $fileType;
-if (!file_exists($templatePath)) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Template-Datei nicht gefunden: ' . $fileType]);
-    exit;
+$sourcePath = null;
+$cleanupPath = null;
+
+if ($downloadUrl) {
+    try {
+        $downloadedFile = downloadFileFromAllowedUrl($downloadUrl);
+        $sourcePath = $downloadedFile['path'];
+        $cleanupPath = $sourcePath;
+        validateDownloadedFile($downloadedFile['path'], $fileType, $downloadedFile['contentType']);
+    } catch (RuntimeException $e) {
+        sendJsonError(400, [
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+} else {
+    // Pfad zur Template-Datei
+    $sourcePath = __DIR__ . '/template.' . $fileType;
+    if (!file_exists($sourcePath)) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Template-Datei nicht gefunden: ' . $fileType]);
+        exit;
+    }
 }
 
 // WebDAV-URL zum Hochladen
@@ -112,20 +328,27 @@ $webdavUrl = NEXTCLOUD_URL . '/remote.php/dav/files/' . rawurlencode(NEXTCLOUD_U
 
 // Datei erstellen via WebDAV
 $ch = curl_init();
+$sourceHandle = fopen($sourcePath, 'r');
+if (!$sourceHandle) {
+    sendJsonError(500, ['error' => 'Quelldatei konnte nicht geöffnet werden'], $cleanupPath);
+}
 curl_setopt($ch, CURLOPT_URL, $webdavUrl);
 curl_setopt($ch, CURLOPT_USERPWD, NEXTCLOUD_USERNAME . ':' . NEXTCLOUD_PASSWORD);
 curl_setopt($ch, CURLOPT_PUT, true);
-curl_setopt($ch, CURLOPT_INFILE, fopen($templatePath, 'r'));
-curl_setopt($ch, CURLOPT_INFILESIZE, filesize($templatePath));
+curl_setopt($ch, CURLOPT_INFILE, $sourceHandle);
+curl_setopt($ch, CURLOPT_INFILESIZE, filesize($sourcePath));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
+fclose($sourceHandle);
 
 if ($httpCode !== 201 && $httpCode !== 204) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Fehler beim Erstellen der Datei', 'httpCode' => $httpCode]);
-    exit;
+    sendJsonError(500, ['error' => 'Fehler beim Erstellen der Datei', 'httpCode' => $httpCode], $cleanupPath);
+}
+
+if ($cleanupPath && file_exists($cleanupPath)) {
+    @unlink($cleanupPath);
 }
 
 // Share-Link erstellen via OCS API

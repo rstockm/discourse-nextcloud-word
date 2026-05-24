@@ -2,3 +2,8 @@ api_url:
   default: "https://nextdiscourse.wolkenbar.de/create-office-file.php"
   type: string
   description: "URL des LAMP-Server API-Endpoints für Nextcloud Office-Integration"
+
+nextcloud_upload_extensions:
+  default: "docx|xlsx|pptx|odt|ods|odp"
+  type: list
+  description: "Dateiendungen, die nach dem Discourse-Upload automatisch zu Nextcloud synchronisiert werden"

@@ -76,6 +76,7 @@ Das Frontend sendet bevorzugt einen JSON-Request an die in `settings.yml` konfig
   "fileType": "docx",
   "originalFileName": "Beispiel.docx",
   "sharePassword": "optional",
+  "downloadUrl": "https://discourse.example.org/uploads/short-url/beispiel.docx",
   "timestamp": "2026-05-06T21:40:00.000Z",
   "encodingMethod": "json"
 }
@@ -84,8 +85,9 @@ Das Frontend sendet bevorzugt einen JSON-Request an die in `settings.yml` konfig
 Von der Middleware aktiv ausgewertet werden aktuell:
 
 - `fileName`: Gewuenschter Dateiname inklusive oder exklusive Endung.
-- `fileType`: Erlaubt sind `docx`, `xlsx` und `pptx`.
+- `fileType`: Im Template-Modus erlaubt sind `docx`, `xlsx` und `pptx`. Im Upload-Sync-Modus sind zusaetzlich `odt`, `ods` und `odp` erlaubt.
 - `sharePassword`: Optionales Passwort fuer den Nextcloud Share.
+- `downloadUrl`: Optional. Wenn gesetzt, laedt die Middleware diese bereits von Discourse akzeptierte Datei herunter und verwendet sie statt einer lokalen Template-Datei.
 
 `originalFileName`, `timestamp` und `encodingMethod` werden vom Frontend mitgesendet, aber in `create-office-file.php` nicht weiterverarbeitet.
 
@@ -129,9 +131,13 @@ define('NEXTCLOUD_USERNAME', 'username');
 define('NEXTCLOUD_PASSWORD', 'app-password');
 define('NEXTCLOUD_TARGET_FOLDER', '/Zielordner');
 define('FILE_PREFIX', 'Dokument_');
+define('ALLOWED_DOWNLOAD_HOSTS', ['discourse.example.org']);
+define('MAX_DOWNLOAD_BYTES', 26214400);
 ```
 
 `NEXTCLOUD_PASSWORD` sollte als Nextcloud App-Passwort behandelt werden und nicht im Repository liegen.
+
+`ALLOWED_DOWNLOAD_HOSTS` ist nur fuer serverseitige Downloads im Upload-Sync-Modus zustaendig. Diese Allowlist ist bewusst von `ALLOWED_ORIGINS` getrennt, weil CORS-Freigaben und Server-to-Server-Downloads unterschiedliche Sicherheitsgrenzen sind.
 
 ## Datei-Erstellung
 
@@ -150,6 +156,23 @@ template.pptx
 ```
 
 Die passende Template-Datei wird per WebDAV `PUT` nach Nextcloud hochgeladen. Der interne Zielpfad wird aus `NEXTCLOUD_TARGET_FOLDER` und `fileName` zusammengesetzt.
+
+## Upload-Sync-Modus
+
+Neben dem Template-Modus kann die Middleware bestehende Dateien ueber `downloadUrl` verarbeiten. Dieser Modus ist fuer Office-Dateien gedacht, die bereits durch den nativen Discourse-Upload akzeptiert wurden.
+
+Der Ablauf:
+
+1. Discourse validiert und speichert die Datei ueber den normalen Composer-Upload.
+2. Die Theme Component erkennt die erlaubte Endung anhand des Settings `nextcloud_upload_extensions`.
+3. Die Theme Component sendet `fileName`, `fileType` und `downloadUrl` an die Middleware.
+4. Die Middleware akzeptiert die URL nur, wenn sie `https` nutzt und der Host in `ALLOWED_DOWNLOAD_HOSTS` steht.
+5. Die Middleware laedt die Datei mit Timeout und maximaler Groesse in ein temporaeres Systemverzeichnis.
+6. Die Datei wird per WebDAV nach Nextcloud hochgeladen und danach lokal geloescht.
+7. Die Middleware erstellt den Share-Link wie im Template-Modus.
+8. Das Frontend ersetzt den Discourse-Anhang nur bei Erfolg durch den Nextcloud-Link.
+
+Wenn der Upload-Sync fehlschlaegt, bleibt der normale Discourse-Anhang im Composer erhalten. Der neue Mechanismus ist damit ein Best-Effort-Sync und bricht den nativen Discourse-Upload nicht.
 
 ## Pfad-Encoding
 
@@ -240,6 +263,8 @@ Wichtige Sicherheitsannahmen und Grenzen:
 - Ohne `sharePassword` ist der Link nur durch die nicht erratbare URL geschuetzt.
 - Die Frontend-Dateinamenbereinigung entfernt problematische Pfad- und Steuerzeichen fuer die Benutzerfuehrung.
 - Die Middleware bereinigt `fileName` zusaetzlich serverseitig und erlaubt dabei einfache Leerzeichen.
+- Server-to-Server-Downloads sind nur von Hosts aus `ALLOWED_DOWNLOAD_HOSTS` erlaubt.
+- Downloads werden auf `https`, oeffentliche IP-Ziele, Redirect-Grenzen, Timeout und `MAX_DOWNLOAD_BYTES` begrenzt.
 
 ## Betrieb und Deployment
 
