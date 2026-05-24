@@ -87,7 +87,8 @@ Von der Middleware aktiv ausgewertet werden aktuell:
 - `fileName`: Gewuenschter Dateiname inklusive oder exklusive Endung.
 - `fileType`: Im Template-Modus erlaubt sind `docx`, `xlsx` und `pptx`. Im Upload-Sync-Modus sind zusaetzlich `odt`, `ods` und `odp` erlaubt.
 - `sharePassword`: Optionales Passwort fuer den Nextcloud Share.
-- `downloadUrl`: Optional. Wenn gesetzt, laedt die Middleware diese bereits von Discourse akzeptierte Datei herunter und verwendet sie statt einer lokalen Template-Datei.
+- `file`: Optional. Die als `multipart/form-data` hochgeladene Datei (für den Hybrid-Upload).
+- `downloadUrl`: Optionales Fallback. Wenn gesetzt und keine Datei direkt hochgeladen wurde, laedt die Middleware diese bereits von Discourse akzeptierte Datei herunter und verwendet sie statt einer lokalen Template-Datei.
 
 `originalFileName`, `timestamp` und `encodingMethod` werden vom Frontend mitgesendet, aber in `create-office-file.php` nicht weiterverarbeitet.
 
@@ -137,7 +138,7 @@ define('MAX_DOWNLOAD_BYTES', 26214400);
 
 `NEXTCLOUD_PASSWORD` sollte als Nextcloud App-Passwort behandelt werden und nicht im Repository liegen.
 
-`ALLOWED_DOWNLOAD_HOSTS` ist nur fuer serverseitige Downloads im Upload-Sync-Modus zustaendig. Diese Allowlist ist bewusst von `ALLOWED_ORIGINS` getrennt, weil CORS-Freigaben und Server-to-Server-Downloads unterschiedliche Sicherheitsgrenzen sind.
+`ALLOWED_DOWNLOAD_HOSTS` ist nur fuer serverseitige Downloads im Fallback-Modus zustaendig (falls das Frontend eine `downloadUrl` sendet statt der Datei selbst). Diese Allowlist ist bewusst von `ALLOWED_ORIGINS` getrennt, weil CORS-Freigaben und Server-to-Server-Downloads unterschiedliche Sicherheitsgrenzen sind.
 
 ## Datei-Erstellung
 
@@ -157,22 +158,22 @@ template.pptx
 
 Die passende Template-Datei wird per WebDAV `PUT` nach Nextcloud hochgeladen. Der interne Zielpfad wird aus `NEXTCLOUD_TARGET_FOLDER` und `fileName` zusammengesetzt.
 
-## Upload-Sync-Modus
+## Upload-Sync-Modus (Hybrid)
 
-Neben dem Template-Modus kann die Middleware bestehende Dateien ueber `downloadUrl` verarbeiten. Dieser Modus ist fuer Office-Dateien gedacht, die bereits durch den nativen Discourse-Upload akzeptiert wurden.
+Neben dem Template-Modus kann die Middleware bestehende Dateien verarbeiten, die direkt als `multipart/form-data` im Feld `file` an die Middleware gesendet werden. Dieser Modus ist fuer Office-Dateien gedacht, die bereits durch den nativen Discourse-Upload akzeptiert wurden.
 
 Der Ablauf:
 
 1. Discourse validiert und speichert die Datei ueber den normalen Composer-Upload.
 2. Die Theme Component erkennt die erlaubte Endung anhand des Settings `nextcloud_upload_extensions`.
-3. Die Theme Component sendet `fileName`, `fileType` und `downloadUrl` an die Middleware.
-4. Die Middleware akzeptiert die URL nur, wenn sie `https` nutzt und der Host in `ALLOWED_DOWNLOAD_HOSTS` steht.
-5. Die Middleware laedt die Datei mit Timeout und maximaler Groesse in ein temporaeres Systemverzeichnis.
-6. Die Datei wird per WebDAV nach Nextcloud hochgeladen und danach lokal geloescht.
+3. Die Theme Component lädt die Datei im Hintergrund (mit den Cookies des angemeldeten Benutzers) von Discourse herunter.
+4. Die Theme Component sendet die Datei als `FormData` zusammen mit `fileName` und `fileType` an die Middleware.
+5. Die Middleware nimmt die Datei entgegen und speichert sie temporär.
+6. Die Datei wird per WebDAV nach Nextcloud hochgeladen (die temporäre Datei wird danach von PHP automatisch gelöscht).
 7. Die Middleware erstellt den Share-Link wie im Template-Modus.
 8. Das Frontend ersetzt den Discourse-Anhang nur bei Erfolg durch den Nextcloud-Link.
 
-Wenn der Upload-Sync fehlschlaegt, bleibt der normale Discourse-Anhang im Composer erhalten. Der neue Mechanismus ist damit ein Best-Effort-Sync und bricht den nativen Discourse-Upload nicht.
+Wenn der Upload-Sync fehlschlaegt, bleibt der normale Discourse-Anhang im Composer erhalten. Der neue Mechanismus ist damit ein Best-Effort-Sync und bricht den nativen Discourse-Upload nicht. Der direkte Datei-Upload an die Middleware umgeht Probleme mit geschützten Discourse-Instanzen, bei denen die Middleware als anonymer Server keinen Zugriff auf Download-URLs hätte.
 
 ## Pfad-Encoding
 

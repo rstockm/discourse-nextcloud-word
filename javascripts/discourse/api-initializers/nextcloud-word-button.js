@@ -122,9 +122,13 @@ export default apiInitializer("1.8.0", (api) => {
       return;
     }
 
+    // Ersetze den originalen Markdown-Link durch einen neuen Markdown-Link zur Nextcloud
+    const fileName = upload.original_filename || upload.filename || 'Document';
+    const newMarkdown = `[${fileName}](${nextcloudUrl})`;
+
     api.container
       .lookup("service:app-events")
-      .trigger("composer:replace-text", originalMarkdown, nextcloudUrl);
+      .trigger("composer:replace-text", originalMarkdown, newMarkdown);
   };
 
   const syncUploadedOfficeFile = async (upload) => {
@@ -133,9 +137,19 @@ export default apiInitializer("1.8.0", (api) => {
       return;
     }
 
+    // DEBUG: Append upload object to composer so we can see what Discourse gives us
+    const composerController = api.container.lookup("controller:composer");
+    if (composerController && composerController.model) {
+      const debugInfo = `\n\n[DEBUG UPLOAD OBJECT]\n\`\`\`json\n${JSON.stringify(upload, null, 2)}\n\`\`\`\n\n`;
+      composerController.model.appendText(debugInfo);
+    }
+
     const downloadUrl = await absoluteUploadUrl(upload);
     if (!downloadUrl) {
       console.warn("Nextcloud upload sync skipped: no downloadable upload URL", upload);
+      if (composerController && composerController.model) {
+        composerController.model.appendText(`\n\n[DEBUG] Sync skipped. absoluteUploadUrl returned null.\n\n`);
+      }
       return;
     }
 
@@ -143,22 +157,35 @@ export default apiInitializer("1.8.0", (api) => {
     const fileName = upload.original_filename || upload.filename || `Document.${extension}`;
 
     try {
+      // Lade die Datei vom Discourse-Server herunter (nutzt die Cookies des angemeldeten Benutzers)
+      const fileResponse = await fetch(downloadUrl);
+      if (!fileResponse.ok) {
+        console.warn("Nextcloud upload sync failed: could not download file from Discourse", fileResponse.status);
+        if (composerController && composerController.model) {
+          composerController.model.appendText(`\n\n[DEBUG] Fetch from Discourse failed: ${fileResponse.status}\n\n`);
+        }
+        return;
+      }
+      const fileBlob = await fileResponse.blob();
+
+      // Sende die Datei per FormData an die Middleware
+      const formData = new FormData();
+      formData.append('file', fileBlob, fileName);
+      formData.append('fileName', fileName);
+      formData.append('fileType', extension);
+      formData.append('timestamp', new Date().toISOString());
+      formData.append('encodingMethod', 'formdata');
+
       const response = await fetch(apiUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileName,
-          fileType: extension,
-          downloadUrl,
-          timestamp: new Date().toISOString(),
-          encodingMethod: "json"
-        }),
+        body: formData
       });
 
       if (!response.ok) {
         console.warn("Nextcloud upload sync failed:", response.status, await response.text());
+        if (composerController && composerController.model) {
+          composerController.model.appendText(`\n\n[DEBUG] PHP Middleware failed: ${response.status}\n\n`);
+        }
         return;
       }
 

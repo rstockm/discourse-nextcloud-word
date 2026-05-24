@@ -272,11 +272,14 @@ $sharePassword = isset($input['sharePassword']) && $input['sharePassword'] !== n
     ? trim($input['sharePassword']) 
     : ''; // Optional: Passwort für Share-Schutz
 
+// Prüfe ob eine Datei direkt hochgeladen wurde (Hybrid-Upload via Frontend-Fetch)
+$uploadedFile = $_FILES['file'] ?? null;
+
 // Debug-Logging (kann später entfernt werden)
-error_log("Nextcloud API Call - FileType: $fileType, FileName: $fileName, HasPassword: " . (!empty($sharePassword) ? 'yes' : 'no'));
+error_log("Nextcloud API Call - FileType: $fileType, FileName: $fileName, HasPassword: " . (!empty($sharePassword) ? 'yes' : 'no') . ", HasFile: " . ($uploadedFile ? 'yes' : 'no'));
 
 // Validierung des Dateityps
-$validTypes = $downloadUrl
+$validTypes = ($downloadUrl || $uploadedFile)
     ? ['docx', 'xlsx', 'pptx', 'odt', 'ods', 'odp']
     : ['docx', 'xlsx', 'pptx'];
 if (!in_array($fileType, $validTypes)) {
@@ -300,7 +303,19 @@ if (!$fileName) {
 $sourcePath = null;
 $cleanupPath = null;
 
-if ($downloadUrl) {
+if ($uploadedFile && $uploadedFile['error'] === UPLOAD_ERR_OK) {
+    // Datei wurde direkt vom Frontend gesendet
+    $sourcePath = $uploadedFile['tmp_name'];
+    // Wir löschen die temporäre Datei nicht manuell, PHP macht das am Ende des Requests
+    try {
+        validateDownloadedFile($sourcePath, $fileType, $uploadedFile['type']);
+    } catch (RuntimeException $e) {
+        sendJsonError(400, [
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+} elseif ($downloadUrl) {
     try {
         $downloadedFile = downloadFileFromAllowedUrl($downloadUrl);
         $sourcePath = $downloadedFile['path'];
