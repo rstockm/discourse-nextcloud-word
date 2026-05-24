@@ -259,20 +259,32 @@ Die Middleware schreibt Debug-Informationen ueber `error_log`, unter anderem:
 
 Passwoerter werden in der vorhandenen Implementierung nicht im Klartext geloggt.
 
-## Sicherheit
+## Sicherheit (Defense in Depth)
 
-Wichtige Sicherheitsannahmen und Grenzen:
+Die Architektur nutzt ein mehrstufiges Sicherheitskonzept ("Defense in Depth"), um den offenen Upload-Endpunkt der Middleware abzusichern.
 
-- **CORS & Origin-Prüfung:** Nur definierte Origins dürfen Anfragen stellen. Die Middleware bricht sofort mit HTTP 403 ab, wenn der `Origin`-Header fehlt oder nicht auf der Allowlist steht. Dies verhindert einfache cURL-Aufrufe von Dritten.
-- **API-Key (Shared Secret):** Wenn in der `config.php` die Konstante `MIDDLEWARE_API_KEY` gesetzt ist, verlangt die Middleware zwingend den Header `X-API-Key`. Dies schützt den Endpunkt effektiv vor automatisierten Spam-Bots und Skripten, die den Endpunkt direkt aufrufen wollen.
-- **SSRF-Schutz (Server-Side Request Forgery):** Im Fallback-Modus (wenn Discourse nur eine URL sendet) werden URLs streng validiert. Nur HTTPS, nur erlaubte Hosts, keine privaten IPs.
-- **Dateigrößenlimit:** Downloads im Fallback-Modus sind hart limitiert (z.B. 25 MB).
-- **MIME-Validierung:** Die Middleware verlässt sich nicht auf Dateiendungen. Sie prüft den tatsächlichen Dateiinhalt (Magic Bytes) via `finfo_open` gegen eine Allowlist von Office-MIME-Types. Dies verhindert, dass ausführbarer Code (z.B. `.php` oder `.exe`) als `.docx` getarnt hochgeladen wird.
-- **Dateinamen-Sanitization:** Dateinamen werden serverseitig bereinigt (Entfernung von Pfadseparatoren, Steuerzeichen), um Path Traversal zu verhindern.
-- **Temporäre Dateien:** Heruntergeladene oder empfangene Dateien werden im System-Temp-Verzeichnis gespeichert und nach dem Upload zu Nextcloud (oder im Fehlerfall) sofort gelöscht.
-- Nextcloud-Zugangsdaten liegen serverseitig in `config.php` und werden nicht an Discourse ausgeliefert.
-- Der oeffentliche Share erhaelt immer Lese- und Schreibrechte (`permissions = 3`).
-- Ohne `sharePassword` ist der Link nur durch die nicht erratbare URL geschuetzt.
+### 1. Discourse-First Validierung (Die erste Verteidigungslinie)
+Im Hybrid-Upload-Modus fängt die Middleware keine Dateien direkt beim Drag & Drop ab. Stattdessen läuft **immer zuerst der native Discourse-Upload komplett durch**. 
+- Discourse prüft die Dateiendung, Dateigröße und führt eventuelle Virenscans aus.
+- Erst wenn Discourse die Datei akzeptiert und auf seinem Server gespeichert hat, lädt das Theme-Component die Datei (mit den Cookies des angemeldeten Nutzers) herunter und sendet sie an die Middleware.
+- Die Middleware verarbeitet also nur Dateien, die bereits von Discourse als sicher eingestuft wurden.
+
+### 2. Absicherung der Middleware (Schutz vor direktem Zugriff)
+Da die `create-office-file.php` ein öffentlicher Endpunkt ist, muss verhindert werden, dass Angreifer Discourse umgehen und Dateien direkt (z.B. via cURL) hochladen:
+- **Strikte Origin-Prüfung:** Die Middleware bricht sofort mit HTTP 403 ab, wenn der `Origin`-Header fehlt oder nicht auf der Allowlist (`ALLOWED_ORIGINS`) steht. Dies blockiert einfache Skripte.
+- **API-Key (Shared Secret):** Wenn in der `config.php` die Konstante `MIDDLEWARE_API_KEY` gesetzt ist, verlangt die Middleware zwingend den Header `X-API-Key`. Dies schützt den Endpunkt effektiv vor automatisierten Spam-Bots und Skripten. Der Key muss im Discourse-Theme hinterlegt werden.
+
+### 3. Serverseitige Validierung (Die letzte Verteidigungslinie)
+Falls ein Angreifer den API-Key aus dem Browser extrahiert und einen Request fälscht, greifen die PHP-internen Schutzmechanismen:
+- **MIME-Validierung (Magic Bytes):** Die Middleware verlässt sich niemals auf Dateiendungen. Sie prüft den tatsächlichen Dateiinhalt via `finfo_open` gegen eine strenge Allowlist von Office-MIME-Types. Dies verhindert, dass ausführbarer Code (z.B. `.php` oder `.exe`) als `.docx` getarnt in die Nextcloud gelangt.
+- **Dateinamen-Sanitization:** Dateinamen werden serverseitig strikt bereinigt (Entfernung von Pfadseparatoren, Steuerzeichen), um Path Traversal Angriffe zu verhindern.
+- **PHP-Limits:** Auf dem LAMP-Server sollten `upload_max_filesize` und `post_max_size` in der `php.ini` restriktiv konfiguriert sein, um Denial-of-Service (DoS) durch gigantische Dateien zu verhindern.
+
+### Weitere Sicherheitsmerkmale
+- **SSRF-Schutz:** Im Fallback-Modus (wenn Discourse nur eine URL sendet) werden URLs streng validiert (nur HTTPS, nur erlaubte Hosts, keine privaten IPs, Größenlimit).
+- **Temporäre Dateien:** Empfangene Dateien werden im System-Temp-Verzeichnis gespeichert und nach dem Upload zu Nextcloud (oder im Fehlerfall) sofort gelöscht.
+- Nextcloud-Zugangsdaten liegen sicher in `config.php` und werden nicht ausgeliefert.
+- Der öffentliche Share erhält Lese- und Schreibrechte (`permissions = 3`), kann aber durch `sharePassword` geschützt werden. Ohne Passwort ist der Link durch die nicht erratbare Nextcloud-URL geschützt.
 
 ## Betrieb und Deployment
 
