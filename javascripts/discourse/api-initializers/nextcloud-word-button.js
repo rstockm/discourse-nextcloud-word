@@ -97,12 +97,14 @@ export default apiInitializer("1.8.0", (api) => {
   const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   const findUploadMarkdown = (reply, upload) => {
-    const candidates = [upload.short_url, upload.url].filter(Boolean);
+    // Discourse fügt oft [Dateiname|attachment](upload://...) ein
+    const candidates = [upload.short_url, upload.url, upload.short_path].filter(Boolean);
 
     for (const candidate of candidates) {
-      const markdownMatch = reply.match(
-        new RegExp(`!?\\[[^\\]\\n]+\\]\\(${escapeRegExp(candidate)}\\)`)
-      );
+      // Suche nach Markdown-Links, die den candidate enthalten.
+      // Erlaubt optional ein '!' am Anfang und beliebigen Text in den Klammern [].
+      const regex = new RegExp(`!?\\[[^\\]\\n]+\\]\\(${escapeRegExp(candidate)}\\)`);
+      const markdownMatch = reply.match(regex);
 
       if (markdownMatch) {
         return markdownMatch[0];
@@ -116,9 +118,15 @@ export default apiInitializer("1.8.0", (api) => {
     const composerController = api.container.lookup("controller:composer");
     const composerModel = composerController?.model;
     const reply = composerModel?.reply || composerModel?.get?.("reply") || "";
+    
+    // Wir suchen nach dem Markdown, das Discourse standardmäßig einfügt.
+    // Das kann [Dateiname|Attachment](upload://...) oder [Dateiname](https://...) sein.
     const originalMarkdown = findUploadMarkdown(reply, upload);
 
     if (!originalMarkdown) {
+      if (composerController && composerController.model) {
+        composerController.model.appendText(`\n\n[DEBUG] replaceUploadedMarkdown failed: Could not find original markdown in composer. Searched for: ${upload.short_url} or ${upload.url}\n\n`);
+      }
       return;
     }
 
