@@ -3,6 +3,11 @@ api_url:
   type: string
   description: "URL des LAMP-Server API-Endpoints für Nextcloud Office-Integration"
 
+middleware_api_key:
+  default: ""
+  type: string
+  description: "Optionaler API-Key zur Absicherung der Middleware (muss mit MIDDLEWARE_API_KEY in der config.php übereinstimmen)"
+
 nextcloud_upload_extensions:
   default: "docx|xlsx|pptx|odt|ods|odp"
   type: list

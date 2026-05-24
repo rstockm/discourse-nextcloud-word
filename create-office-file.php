@@ -4,18 +4,34 @@ header('Content-Type: application/json');
 // Config laden
 require_once 'config.php';
 
-// CORS-Header
+// CORS und Origin-Prüfung
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, ALLOWED_ORIGINS)) {
     header("Access-Control-Allow-Origin: $origin");
     header('Access-Control-Allow-Methods: POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type');
+    header('Access-Control-Allow-Headers: Content-Type, X-API-Key');
+} else {
+    // Strikte Blockade, wenn der Origin nicht in der Allowlist ist (schützt vor direktem cURL ohne gefälschten Origin)
+    http_response_code(403);
+    echo json_encode(['error' => 'Origin nicht erlaubt']);
+    exit;
 }
 
 // OPTIONS-Request für CORS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
+}
+
+// API-Key Prüfung (Shared Secret)
+if (defined('MIDDLEWARE_API_KEY') && MIDDLEWARE_API_KEY !== '') {
+    $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? '';
+    if ($apiKey !== MIDDLEWARE_API_KEY) {
+        http_response_code(403);
+        error_log("Nextcloud API Call - Blocked: Invalid or missing API Key");
+        echo json_encode(['error' => 'Ungültiger oder fehlender API-Key']);
+        exit;
+    }
 }
 
 // Nur POST erlaubt

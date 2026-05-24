@@ -134,9 +134,14 @@ define('NEXTCLOUD_TARGET_FOLDER', '/Zielordner');
 define('FILE_PREFIX', 'Dokument_');
 define('ALLOWED_DOWNLOAD_HOSTS', ['discourse.example.org']);
 define('MAX_DOWNLOAD_BYTES', 26214400);
+
+// OPTIONAL ABER EMPFOHLEN: Ein Shared Secret zur Absicherung des Endpunkts
+define('MIDDLEWARE_API_KEY', 'dein-sehr-langes-geheimes-passwort');
 ```
 
 `NEXTCLOUD_PASSWORD` sollte als Nextcloud App-Passwort behandelt werden und nicht im Repository liegen.
+
+`MIDDLEWARE_API_KEY` sollte ein starkes, zufälliges Passwort sein. Wenn es in der `config.php` definiert ist, **muss** das Discourse-Frontend diesen Key im HTTP-Header `X-API-Key` mitsenden, sonst bricht die Middleware mit HTTP 403 ab. Dieser Key muss identisch in den Discourse Theme-Settings unter `middleware_api_key` eingetragen werden.
 
 `ALLOWED_DOWNLOAD_HOSTS` ist nur fuer serverseitige Downloads im Fallback-Modus zustaendig (falls das Frontend eine `downloadUrl` sendet statt der Datei selbst). Diese Allowlist ist bewusst von `ALLOWED_ORIGINS` getrennt, weil CORS-Freigaben und Server-to-Server-Downloads unterschiedliche Sicherheitsgrenzen sind.
 
@@ -258,14 +263,16 @@ Passwoerter werden in der vorhandenen Implementierung nicht im Klartext geloggt.
 
 Wichtige Sicherheitsannahmen und Grenzen:
 
-- CORS wird ueber `ALLOWED_ORIGINS` begrenzt.
+- **CORS & Origin-Prüfung:** Nur definierte Origins dürfen Anfragen stellen. Die Middleware bricht sofort mit HTTP 403 ab, wenn der `Origin`-Header fehlt oder nicht auf der Allowlist steht. Dies verhindert einfache cURL-Aufrufe von Dritten.
+- **API-Key (Shared Secret):** Wenn in der `config.php` die Konstante `MIDDLEWARE_API_KEY` gesetzt ist, verlangt die Middleware zwingend den Header `X-API-Key`. Dies schützt den Endpunkt effektiv vor automatisierten Spam-Bots und Skripten, die den Endpunkt direkt aufrufen wollen.
+- **SSRF-Schutz (Server-Side Request Forgery):** Im Fallback-Modus (wenn Discourse nur eine URL sendet) werden URLs streng validiert. Nur HTTPS, nur erlaubte Hosts, keine privaten IPs.
+- **Dateigrößenlimit:** Downloads im Fallback-Modus sind hart limitiert (z.B. 25 MB).
+- **MIME-Validierung:** Die Middleware verlässt sich nicht auf Dateiendungen. Sie prüft den tatsächlichen Dateiinhalt (Magic Bytes) via `finfo_open` gegen eine Allowlist von Office-MIME-Types. Dies verhindert, dass ausführbarer Code (z.B. `.php` oder `.exe`) als `.docx` getarnt hochgeladen wird.
+- **Dateinamen-Sanitization:** Dateinamen werden serverseitig bereinigt (Entfernung von Pfadseparatoren, Steuerzeichen), um Path Traversal zu verhindern.
+- **Temporäre Dateien:** Heruntergeladene oder empfangene Dateien werden im System-Temp-Verzeichnis gespeichert und nach dem Upload zu Nextcloud (oder im Fehlerfall) sofort gelöscht.
 - Nextcloud-Zugangsdaten liegen serverseitig in `config.php` und werden nicht an Discourse ausgeliefert.
 - Der oeffentliche Share erhaelt immer Lese- und Schreibrechte (`permissions = 3`).
 - Ohne `sharePassword` ist der Link nur durch die nicht erratbare URL geschuetzt.
-- Die Frontend-Dateinamenbereinigung entfernt problematische Pfad- und Steuerzeichen fuer die Benutzerfuehrung.
-- Die Middleware bereinigt `fileName` zusaetzlich serverseitig und erlaubt dabei einfache Leerzeichen.
-- Server-to-Server-Downloads sind nur von Hosts aus `ALLOWED_DOWNLOAD_HOSTS` erlaubt.
-- Downloads werden auf `https`, oeffentliche IP-Ziele, Redirect-Grenzen, Timeout und `MAX_DOWNLOAD_BYTES` begrenzt.
 
 ## Betrieb und Deployment
 

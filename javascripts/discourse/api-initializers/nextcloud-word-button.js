@@ -177,8 +177,14 @@ export default apiInitializer("1.8.0", (api) => {
       formData.append('timestamp', new Date().toISOString());
       formData.append('encodingMethod', 'formdata');
 
+      const headers = {};
+      if (settings.middleware_api_key) {
+        headers["X-API-Key"] = settings.middleware_api_key;
+      }
+
       const response = await fetch(apiUrl, {
         method: "POST",
+        headers,
         body: formData
       });
 
@@ -454,11 +460,16 @@ export default apiInitializer("1.8.0", (api) => {
         
         try {
           // Methode 1: Standard JSON (sollte funktionieren)
+          const headers = {
+            "Content-Type": "application/json",
+          };
+          if (settings.middleware_api_key) {
+            headers["X-API-Key"] = settings.middleware_api_key;
+          }
+
           response = await fetch(apiUrl, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers,
             body: JSON.stringify({ 
               fileName: sanitizedFileName, 
               fileType,
@@ -481,8 +492,14 @@ export default apiInitializer("1.8.0", (api) => {
             formData.append('timestamp', new Date().toISOString());
             formData.append('encodingMethod', 'formdata');
             
+            const fdHeaders = {};
+            if (settings.middleware_api_key) {
+              fdHeaders["X-API-Key"] = settings.middleware_api_key;
+            }
+
             response = await fetch(apiUrl, {
               method: "POST",
+              headers: fdHeaders,
               body: formData
             });
           } catch (error2) {
@@ -497,11 +514,16 @@ export default apiInitializer("1.8.0", (api) => {
             params.append('timestamp', new Date().toISOString());
             params.append('encodingMethod', 'urlencoded');
             
+            const urlHeaders = {
+              "Content-Type": "application/x-www-form-urlencoded",
+            };
+            if (settings.middleware_api_key) {
+              urlHeaders["X-API-Key"] = settings.middleware_api_key;
+            }
+
             response = await fetch(apiUrl, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
+              headers: urlHeaders,
               body: params.toString()
             });
           }
