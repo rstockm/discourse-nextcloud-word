@@ -125,7 +125,7 @@ export default apiInitializer("1.8.0", (api) => {
 
     if (!originalMarkdown) {
       if (composerController && composerController.model) {
-        composerController.model.appendText(`\n\n[DEBUG] replaceUploadedMarkdown failed: Could not find original markdown in composer. Searched for: ${upload.short_url} or ${upload.url}\n\n`);
+        composerController.model.appendText(`\n\n[DEBUG] replaceUploadedMarkdown failed: Could not find original markdown in composer. Searched for: ${upload.short_url} or ${upload.url}\n\n--- COMPOSER CONTENT START ---\n${reply}\n--- COMPOSER CONTENT END ---\n\n`);
       }
       return;
     }
