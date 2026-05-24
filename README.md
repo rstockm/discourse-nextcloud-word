@@ -1,20 +1,34 @@
-# Discourse Nextcloud Word Integration
+# Discourse Nextcloud Office Integration
 
-Eine Discourse Theme Component, die das Erstellen von Office-Dokumenten in Nextcloud direkt aus dem Discourse Composer ermöglicht.
+Eine Discourse Theme Component, die das Erstellen und Synchronisieren von Office-Dokumenten in Nextcloud direkt aus dem Discourse Composer ermöglicht.
 
 ## Features
 
-- ✅ Button "Word/EXCEL/PowerPoint-Datei" im Discourse Composer
-- ✅ Erstellt .docx/.xlsx./pptx-Dateien in Nextcloud
-- ✅ Fügt bearbeitbaren Share-Link ins Posting ein
-- ✅ Automatische Dateinamengenerierung aus Topic-Titel
-- ✅ Konfigurierbare API-URL via Theme-Settings
+### 1. Template-Modus (Neue Dateien erstellen)
+- ✅ Buttons für "Word", "Excel" und "PowerPoint" im Discourse Composer
+- ✅ Erstellt leere `.docx`, `.xlsx` oder `.pptx` Dateien in Nextcloud
+- ✅ Eigener Dialog zur Eingabe des Dateinamens (mit Vorschlag aus dem Topic-Titel)
+- ✅ Optional: Vergabe eines Passworts für den Nextcloud-Share direkt im Dialog
+- ✅ Fügt einen bearbeitbaren Share-Link als Markdown ins Posting ein
+
+### 2. Hybrid-Upload-Modus (Bestehende Dateien synchronisieren)
+- ✅ Erkennt automatisch Office-Dateien, die per Drag & Drop in Discourse hochgeladen werden
+- ✅ Lädt die Datei im Hintergrund (mit Nutzer-Cookies) herunter und sendet sie an die Middleware
+- ✅ Ersetzt den nativen Discourse-Anhang automatisch durch einen Nextcloud-Share-Link
+- ✅ Konfigurierbare Dateiendungen (Standard: `docx, xlsx, pptx, odt, ods, odp`)
+
+### 3. Sicherheit (Defense in Depth)
+- ✅ **API-Key:** Absicherung der Middleware durch einen Shared Secret (`X-API-Key`)
+- ✅ **Origin-Prüfung:** Harte Blockade von Requests außerhalb der Discourse-Domain
+- ✅ **MIME-Validierung:** Serverseitige Prüfung der "Magic Bytes" (Schutz vor getarnten `.exe` oder `.php` Dateien)
+- ✅ **Sanitization:** Strikte Bereinigung von Dateinamen gegen Path Traversal
 
 ## Voraussetzungen
 
 Diese Theme Component benötigt einen LAMP-Server als Middleware zwischen Discourse und Nextcloud. 
 
-**Backend-Code:** Die PHP-Middleware finden Sie im Hauptprojekt-Repository.
+**Backend-Code:** Die PHP-Middleware (`create-office-file.php`) und die zugehörige Dokumentation finden Sie im Hauptprojekt-Repository.
+👉 **[Details zur Middleware-Einrichtung lesen (MIDDLEWARE.md)](MIDDLEWARE.md)**
 
 ## Installation
 
@@ -31,106 +45,47 @@ Diese Theme Component benötigt einen LAMP-Server als Middleware zwischen Discou
    ```
 5. **Install** klicken
 
-**Via Manual Upload:**
-
-1. Repository herunterladen
-2. Admin-Panel → **Customize** → **Themes**  
-3. **Install** → Dateien einzeln hochladen
-
 ### 2. Component aktivieren
 
 1. Wählen Sie ein aktives Theme
-2. **Include component** → `Nextcloud Word Integration`
+2. **Include component** → `Nextcloud Office Integration`
 3. **Save**
 
-### 3. API-URL konfigurieren (optional)
+### 3. Konfiguration (Settings)
 
-Falls Ihr LAMP-Server eine andere URL hat:
+In den Einstellungen der Theme Component müssen folgende Werte konfiguriert werden:
 
-1. Theme Component öffnen
-2. **Settings** → `api_url` anpassen
-3. **Save**
+- **`api_url`**: URL des LAMP-Server API-Endpoints (z.B. `https://middleware.domain.de/create-office-file.php`)
+- **`middleware_api_key`**: Der geheime API-Key zur Absicherung der Middleware. **Muss exakt mit der Konstante `MIDDLEWARE_API_KEY` in der `config.php` auf dem LAMP-Server übereinstimmen!**
+- **`nextcloud_upload_extensions`**: Liste der Dateiendungen, die beim Drag & Drop automatisch zu Nextcloud synchronisiert werden sollen (Standard: `docx|xlsx|pptx|odt|ods|odp`).
 
 ## Verwendung
 
+### Neue Datei erstellen
 1. Neuen Post oder Reply in Discourse erstellen
-2. Button **"Word-Datei"** im Composer-Toolbar klicken
-3. Word-Dokument wird automatisch in Nextcloud erstellt
+2. Auf das Zahnrad-Icon (Extras) im Composer-Toolbar klicken und "Word/Excel/PowerPoint-Datei" wählen
+3. Dateinamen und (optional) ein Passwort vergeben
 4. Bearbeitbarer Share-Link wird ins Posting eingefügt
 
-**Beispiel-Output:**
-```markdown
-📄 [Mein-Dokument.docx](https://nextcloud.domain/s/xxxxx)
-```
-
-## Konfiguration
-
-### Theme Settings
-
-- **api_url**: URL des LAMP-Server API-Endpoints (Standard: `https://nextdiscourse.wolkenbar.de/create-docx.php`)
-
-### Button-Anpassungen
-
-Um den Button anzupassen, editieren Sie `javascripts/discourse/api-initializers/nextcloud-word-button.js`:
-
-**Icon ändern:**
-```javascript
-icon: "file-word"  // Andere Icons: "file", "cloud", "folder", etc.
-```
-
-**Label ändern:**
-```javascript
-label: "Word-Datei"  // Ihr eigener Text
-```
-
-**Position ändern:**
-```javascript
-group: "extras"  // Optionen: "fontStyles", "insertions", "extras"
-```
-
-## Architektur
-
-```
-Discourse Theme Component (JavaScript)
-    ↓ AJAX POST
-LAMP-Server Middleware (PHP)
-    ↓ WebDAV + OCS API
-Nextcloud (Dateispeicher)
-```
+### Bestehende Datei hochladen
+1. Eine Office-Datei (z.B. `.docx` oder `.odt`) per Drag & Drop in den Discourse-Editor ziehen
+2. Warten, bis der normale Discourse-Upload abgeschlossen ist
+3. Das Plugin synchronisiert die Datei im Hintergrund zu Nextcloud und ersetzt den Link automatisch
 
 ## Fehlerbehebung
 
-### Button erscheint nicht
+### "Fehler beim Erstellen der Office-Datei"
+- Prüfen Sie die `api_url` in den Settings.
+- Prüfen Sie, ob der `middleware_api_key` in Discourse exakt mit der `config.php` übereinstimmt.
+- Öffnen Sie die Browser-Console (F12) für detaillierte Fehlermeldungen (z.B. HTTP 403 Forbidden bei falschem API-Key).
 
-- Prüfen Sie, ob die Component einem aktiven Theme zugewiesen ist
-- Browser-Cache leeren
-- Discourse-Browser-Session neu laden
+### Der Drag & Drop Upload wird nicht synchronisiert
+- Prüfen Sie, ob die Dateiendung in den Settings unter `nextcloud_upload_extensions` gelistet ist.
+- Prüfen Sie, ob Ihr Discourse-Setup den Download von Dateien durch den Browser blockiert.
 
-### "Fehler beim Erstellen der Word-Datei"
-
-- Prüfen Sie die API-URL in den Settings
-- Öffnen Sie Browser-Console für Details (F12 → Console)
-- Testen Sie die API direkt:
-  ```bash
-  curl -X POST https://ihre-api.domain/create-docx.php \
-    -H "Content-Type: application/json" \
-    -d '{"fileName": "test.docx"}'
-  ```
-
-### CORS-Fehler
-
-Stellen Sie sicher, dass Ihre Discourse-Domain in der LAMP-Server `config.php` unter `ALLOWED_ORIGINS` eingetragen ist:
-
-```php
-define('ALLOWED_ORIGINS', ['https://ihre-discourse.domain']);
-```
-
-## Support
+## Support & Lizenz
 
 Bei Problemen bitte ein Issue im GitHub-Repository erstellen.
-
-## Lizenz
-
 MIT License - siehe LICENSE-Datei
 
 
