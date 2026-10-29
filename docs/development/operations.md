@@ -45,9 +45,11 @@ Discourse-Admin-Panel installiert, nicht durch Editieren von `app.yml`.
 1. **Sicherung vorbereiten:** Cloudron-Backup der Discourse-App anstoßen und
    den aktuellen Stand (Discourse-Version) notieren.
 2. **Plugin installieren** — zwei Wege:
-   - *Über Git:* Admin → Plugins → *Install a plugin* → Git-URL des Repositorys,
-     Branch auswählen (setzt voraus, dass ein Branch veröffentlicht ist und der
-     Server GitHub erreicht). Cloudron startet die App danach neu.
+   - *Über Git:* Admin → Plugins → *Install a plugin* mit
+     `https://github.com/rstockm/discourse-nextcloud-word.git` und Branch
+     `feat/nextcloud-office-plugin-mvp`. Das Plugin liegt im Wurzelverzeichnis
+     (`plugin.rb`), ein Unterordner/`subdirectory` ist nicht nötig. Cloudron
+     startet die App danach neu.
    - *Ohne Git:* `bash script/package-plugin` erzeugt
      `dist/discourse-nextcloud-office-<version>.tar.gz` (nur Laufzeitdateien).
      Archiv in den Plugin-Ordner der Instanz entpacken
