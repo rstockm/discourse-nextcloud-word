@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Builds a plugin tarball for manual installation on a test instance
+# (e.g. copy into the container's plugins directory). Not a release artifact.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+name="discourse-nextcloud-office"
+version="$(sed -n 's/^# version: //p' plugin.rb)"
+out="$ROOT/dist"
+mkdir -p "$out"
+target="$out/${name}-${version}.tar.gz"
+
+# Only runtime files; specs, docs and the legacy theme/PHP code stay out.
+tar -czf "$target" \
+  --exclude='*.DS_Store' \
+  -C "$ROOT" plugin.rb lib app config assets db
+
+printf '%s\n' "$target"
+printf 'sha256 %s\n' "$(shasum -a 256 "$target" | cut -d' ' -f1)"

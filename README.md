@@ -1,91 +1,111 @@
-# Discourse Nextcloud Office Integration
+# Discourse Nextcloud Office
 
-Eine Discourse Theme Component, die das Erstellen und Synchronisieren von Office-Dokumenten in Nextcloud direkt aus dem Discourse Composer ermöglicht.
+Ein Discourse-Plugin, das Office-Dokumente aus dem Composer heraus in Nextcloud
+erstellt und hochgeladene Office-Dateien in bearbeitbare Nextcloud-Links
+überführt. Collabora wird über Nextcloud geöffnet.
 
-## Features
+Status: **Entwicklungs-MVP**. Erstellen, Hochladen, Wiederanlauf und
+Fehlerbehandlung sind lokal gegen synthetische Nextcloud-Antworten und in
+Chromium getestet. Ein Abnahmelauf gegen eine echte Nextcloud-/Collabora-Instanz
+steht noch aus. Der alte Theme-/PHP-Weg ist noch im Repository, aber nicht mehr
+der Zielpfad (siehe [Legacy](#legacy-theme-und-php)).
 
-### 1. Template-Modus (Neue Dateien erstellen)
-- ✅ Buttons für "Word", "Excel" und "PowerPoint" im Discourse Composer
-- ✅ Erstellt leere `.docx`, `.xlsx` oder `.pptx` Dateien in Nextcloud
-- ✅ Eigener Dialog zur Eingabe des Dateinamens (mit Vorschlag aus dem Topic-Titel)
-- ✅ Optional: Vergabe eines Passworts für den Nextcloud-Share direkt im Dialog
-- ✅ Fügt einen bearbeitbaren Share-Link als Markdown ins Posting ein
+## Funktionen
 
-### 2. Hybrid-Upload-Modus (Bestehende Dateien synchronisieren)
-- ✅ Erkennt automatisch Office-Dateien, die per Drag & Drop in Discourse hochgeladen werden
-- ✅ Lädt die Datei im Hintergrund (mit Nutzer-Cookies) herunter und sendet sie an die Middleware
-- ✅ Ersetzt den nativen Discourse-Anhang automatisch durch einen Nextcloud-Share-Link
-- ✅ Konfigurierbare Dateiendungen (Standard: `docx, xlsx, pptx, odt, ods, odp`)
+- Word-, Excel- und PowerPoint-Vorlage direkt im Composer erstellen
+  (Plugin-Menü im Toolbar-Popup), Dateiname wird aus Thementitel und Datum
+  vorgeschlagen.
+- Optionales Passwort für den Nextcloud-Share.
+- Hochladen von `.docx`, `.xlsx`, `.pptx`, `.odt`, `.ods` und `.odp` direkt aus
+  dem Composer; die Bytes gehen an Nextcloud, das Dokument wird durch einen
+  bearbeitbaren Share-Link ersetzt. Es entsteht kein Discourse-Anhang.
+- Ergebnis-Link wird über die native Editor-API eingefügt und bleibt bei einem
+  Entwurfswechsel außerhalb des Editors über „Letztes Office-Dokument öffnen“
+  erreichbar.
+- Sicherheit: nur Browser-Sitzung mit CSRF (keine API-Keys), begrenzter
+  Nextcloud-Transport, kollisionsfreie Zielpfade ohne Überschreiben,
+  Paketprüfung der Office-Dateien, Journal mit idempotenten Wiederholungen.
 
-### 3. Sicherheit (Defense in Depth)
-- ✅ **API-Key:** Absicherung der Middleware durch einen Shared Secret (`X-API-Key`)
-- ✅ **Origin-Prüfung:** Harte Blockade von Requests außerhalb der Discourse-Domain
-- ✅ **MIME-Validierung:** Serverseitige Prüfung der "Magic Bytes" (Schutz vor getarnten `.exe` oder `.php` Dateien)
-- ✅ **Sanitization:** Strikte Bereinigung von Dateinamen gegen Path Traversal
+Phase 1 bleibt bewusst so: Der Share ist öffentlich bearbeitbar. Discourse-
+Themen- und Gruppenrechte schützen ihn **nicht**, es gibt keine automatische
+Löschung in Nextcloud und keinen Dateiabgleich. Eine Ableitung von
+Discourse-Rechten wäre Phase 2.
 
 ## Voraussetzungen
 
-Diese Theme Component benötigt einen LAMP-Server als Middleware zwischen Discourse und Nextcloud. 
-
-**Backend-Code:** Die PHP-Middleware (`create-office-file.php`) und die zugehörige Dokumentation finden Sie im Hauptprojekt-Repository.
-👉 **[Details zur Middleware-Einrichtung lesen (MIDDLEWARE.md)](MIDDLEWARE.md)**
+- Discourse aus der geprüften Baseline (`2026.11.0-latest`-Reihe, Core-SHA
+  `adf7244270b88a5485b32c7e815217e35c68b4e4`).
+- Nextcloud mit aktivem Collabora-Anschluss (Nextcloud Office).
+- Ein Nextcloud-Dienstkonto mit App-Passwort und Schreibrecht auf den Zielordner.
+- HTTPS für Discourse und Nextcloud; Nextcloud muss vom Discourse-Server aus
+  erreichbar sein.
+- Die Office-Endungen müssen in Discourse als Anhänge erlaubt sein
+  (`authorized_extensions`), sonst lehnt das Plugin den Upload ab.
 
 ## Installation
 
-### 1. Theme Component installieren
+1. Als Admin unter **Admin → Plugins** das Repository per Git-URL installieren.
+2. Plugin aktivieren und in den Einstellungen konfigurieren:
 
-**Via GitHub (empfohlen):**
+   | Setting | Bedeutung |
+   | --- | --- |
+   | `nextcloud_office_enabled` | Schaltet die Integration ein (Standard: aus) |
+   | `nextcloud_office_base_url` | `https://cloud.example.com`, ohne Pfad/Query/Zugangsdaten |
+   | `nextcloud_office_username` | Nextcloud-Dienstkonto |
+   | `nextcloud_office_app_password` | App-Passwort, nur serverseitig gespeichert |
+   | `nextcloud_office_folder` | Zielordner relativ zu den Dateien des Kontos |
+   | `nextcloud_office_max_file_size_mb` | Obergrenze, wirksam bis zur maximalen Anhangsgröße |
 
-1. Als Admin in Discourse einloggen
-2. Admin-Panel → **Customize** → **Themes**
-3. **Install** → **From a git repository**
-4. Repository-URL eingeben:
-   ```
-   https://github.com/rstockm/discourse-nextcloud-word
-   ```
-5. **Install** klicken
+3. Erst danach `nextcloud_office_enabled` einschalten; ohne vollständige
+   Konfiguration antworten die Endpoints mit `not_configured`.
+4. Bei privaten Nextcloud-Zielen die Freigabe in den Server-Einstellungen
+   beachten (siehe [Serververtrag](docs/development/server-contract.md)).
 
-### 2. Component aktivieren
-
-1. Wählen Sie ein aktives Theme
-2. **Include component** → `Nextcloud Office Integration`
-3. **Save**
-
-### 3. Konfiguration (Settings)
-
-In den Einstellungen der Theme Component müssen folgende Werte konfiguriert werden:
-
-- **`api_url`**: URL des LAMP-Server API-Endpoints (z.B. `https://middleware.domain.de/create-office-file.php`)
-- **`middleware_api_key`**: Der geheime API-Key zur Absicherung der Middleware. **Muss exakt mit der Konstante `MIDDLEWARE_API_KEY` in der `config.php` auf dem LAMP-Server übereinstimmen!**
-- **`nextcloud_upload_extensions`**: Liste der Dateiendungen, die beim Drag & Drop automatisch zu Nextcloud synchronisiert werden sollen (Standard: `docx|xlsx|pptx|odt|ods|odp`).
+Details zu Endpoints, Fehlercodes, Limits und Sicherheitsgrenzen:
+[docs/development/server-contract.md](docs/development/server-contract.md).
+Betrieb, Cutover und Rollback: [docs/development/operations.md](docs/development/operations.md).
 
 ## Verwendung
 
-### Neue Datei erstellen
-1. Neuen Post oder Reply in Discourse erstellen
-2. Auf das Zahnrad-Icon (Extras) im Composer-Toolbar klicken und "Word/Excel/PowerPoint-Datei" wählen
-3. Dateinamen und (optional) ein Passwort vergeben
-4. Bearbeitbarer Share-Link wird ins Posting eingefügt
+### Neues Dokument
 
-### Bestehende Datei hochladen
-1. Eine Office-Datei (z.B. `.docx` oder `.odt`) per Drag & Drop in den Discourse-Editor ziehen
-2. Warten, bis der normale Discourse-Upload abgeschlossen ist
-3. Das Plugin synchronisiert die Datei im Hintergrund zu Nextcloud und ersetzt den Link automatisch
+1. Composer öffnen, im Toolbar-Popup „Word-Dokument erstellen“ (oder Excel/
+   PowerPoint) wählen.
+2. Dateiname prüfen und optional ein Share-Passwort setzen.
+3. „Dokument erstellen“ – der Nextcloud-Link erscheint im Beitrag.
 
-## Fehlerbehebung
+Wird die Bestätigung nicht empfangen (z. B. Timeout), zeigt der Dialog das an.
+Erneut senden setzt **denselben** Vorgang fort; kein neues Dokument, kein
+zweiter Share.
 
-### "Fehler beim Erstellen der Office-Datei"
-- Prüfen Sie die `api_url` in den Settings.
-- Prüfen Sie, ob der `middleware_api_key` in Discourse exakt mit der `config.php` übereinstimmt.
-- Öffnen Sie die Browser-Console (F12) für detaillierte Fehlermeldungen (z.B. HTTP 403 Forbidden bei falschem API-Key).
+### Bestehende Datei
 
-### Der Drag & Drop Upload wird nicht synchronisiert
-- Prüfen Sie, ob die Dateiendung in den Settings unter `nextcloud_upload_extensions` gelistet ist.
-- Prüfen Sie, ob Ihr Discourse-Setup den Download von Dateien durch den Browser blockiert.
+Eine Office-Datei in den Composer ziehen oder über den Anhangs-Button wählen.
+Bei aktiviertem Plugin übernimmt das Plugin die Übertragung für die sechs
+Formate; schlägt sie fehl, erscheint eine Fehlermeldung statt eines
+Discourse-Uploads.
+
+## Prüfen
+
+```sh
+bash script/check          # Lint, Rubocop, OpenSpec, Plugin-Specs inkl. Chromium, QUnit
+bash script/check --fast   # nur statische Prüfungen
+```
+
+Die Testumgebung (Postgres 55432, Redis 56379) ist in
+[docs/development/local-tests.md](docs/development/local-tests.md) beschrieben.
+Was die Checks belegen und was nicht: [docs/development/verification.md](docs/development/verification.md).
+
+## Legacy: Theme und PHP
+
+`javascripts/`, `common/`, `locales/`, `about.json`, `settings.yml` (Theme) und
+`create-office-file.php` stammen aus der alten Theme-Component mit PHP-
+Middleware. Sie sind nicht Teil des Plugins (`plugin.rb` lädt nur
+`lib/discourse_nextcloud_office`). Der alte Weg mit Browser-API-Key und
+PHP-Zwischenserver ist unsicher und soll erst entfernt werden, wenn das Plugin
+die Abnahme gegen die echte Instanz bestanden hat. Bis dahin nicht mehr
+aktualisieren und in Discourse nicht mehr neu installieren.
 
 ## Support & Lizenz
 
-Bei Problemen bitte ein Issue im GitHub-Repository erstellen.
-MIT License - siehe LICENSE-Datei
-
-
+Issues bitte im GitHub-Repository. MIT License, siehe [LICENSE](LICENSE).

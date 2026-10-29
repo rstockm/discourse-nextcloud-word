@@ -1,0 +1,17 @@
+plugins:
+  nextcloud_office_enabled:
+    default: false
+    client: true
+  nextcloud_office_base_url:
+    default: ""
+  nextcloud_office_username:
+    default: ""
+  nextcloud_office_app_password:
+    default: ""
+    secret: true
+  nextcloud_office_folder:
+    default: "Discourse"
+  nextcloud_office_max_file_size_mb:
+    default: 25
+    min: 1
+    max: 100

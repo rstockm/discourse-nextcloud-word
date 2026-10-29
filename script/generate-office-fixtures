@@ -1,0 +1,210 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Generates the synthetic, deterministic Office fixtures used by the plugin
+# specs. The files contain no real user data and are intentionally minimal
+# structurally valid OOXML/ODF packages.
+#
+# Run from the repository root with the isolated core bundle:
+#   BUNDLE_GEMFILE="$PWD/.local/discourse/Gemfile" BUNDLE_PATH="$PWD/.local/bundle" \
+#     .local/gems/bin/bundle exec ruby script/generate-office-fixtures
+
+require "zip"
+require "digest"
+require "fileutils"
+
+ROOT = File.expand_path("..", __dir__)
+OUTPUT = File.join(ROOT, "spec/fixtures/office")
+FIXED_TIME = Time.utc(2026, 1, 1, 0, 0, 0)
+REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+CT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
+OFFICE_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+ODF_MANIFEST_NS = "urn:oasis:names:tc:opendocument:xmlns:manifest:1.0"
+
+def write_zip(name, entries, stored: [])
+  path = File.join(OUTPUT, name)
+  FileUtils.mkdir_p(File.dirname(path))
+  FileUtils.rm_f(path)
+
+  Zip::OutputStream.open(path) do |zip|
+    entries.each do |entry_name, content|
+      method = stored.include?(entry_name) ? Zip::Entry::STORED : Zip::Entry::DEFLATED
+      entry = Zip::Entry.new("", entry_name, time: FIXED_TIME, compression_method: method)
+      zip.put_next_entry(entry)
+      zip.write(content)
+    end
+  end
+
+  if name.start_with?("template.")
+    FileUtils.mkdir_p(File.join(ROOT, "templates"))
+    FileUtils.cp(path, File.join(ROOT, "templates", name))
+  end
+  puts "#{name}  sha256=#{Digest::SHA256.file(path).hexdigest}  bytes=#{File.size(path)}"
+end
+
+def content_types(overrides)
+  defaults = <<~XML
+    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+    <Default Extension="xml" ContentType="application/xml"/>
+  XML
+  override_xml =
+    overrides.map { |part, type| %(<Override PartName="/#{part}" ContentType="#{type}"/>) }.join
+
+  <<~XML
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Types xmlns="#{CT_NS}">
+    #{defaults}#{override_xml}
+    </Types>
+  XML
+end
+
+def root_rels(target)
+  <<~XML
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Relationships xmlns="#{REL_NS}">
+      <Relationship Id="rId1" Type="#{OFFICE_REL}" Target="#{target}"/>
+    </Relationships>
+  XML
+end
+
+def docx_entries(text)
+  {
+    "[Content_Types].xml" =>
+      content_types(
+        "word/document.xml" =>
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+      ),
+    "_rels/.rels" => root_rels("word/document.xml"),
+    "word/document.xml" => <<~XML,
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:body>
+          <w:p><w:r><w:t>#{text}</w:t></w:r></w:p>
+          <w:sectPr/>
+        </w:body>
+      </w:document>
+    XML
+  }
+end
+
+def xlsx_entries(text)
+  {
+    "[Content_Types].xml" =>
+      content_types(
+        "xl/workbook.xml" =>
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+        "xl/worksheets/sheet1.xml" =>
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
+      ),
+    "_rels/.rels" => root_rels("xl/workbook.xml"),
+    "xl/workbook.xml" => <<~XML,
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+        <sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>
+      </workbook>
+    XML
+    "xl/_rels/workbook.xml.rels" => <<~XML,
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <Relationships xmlns="#{REL_NS}">
+        <Relationship Id="rId1"
+          Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
+          Target="worksheets/sheet1.xml"/>
+      </Relationships>
+    XML
+    "xl/worksheets/sheet1.xml" => <<~XML,
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+        <sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>#{text}</t></is></c></row></sheetData>
+      </worksheet>
+    XML
+  }
+end
+
+def pptx_entries(text)
+  # An empty presentation is structurally complete and serves as a blank deck.
+  # The text is recorded in the document properties instead of a slide.
+  {
+    "[Content_Types].xml" =>
+      content_types(
+        "ppt/presentation.xml" =>
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+      ),
+    "_rels/.rels" => root_rels("ppt/presentation.xml"),
+    "ppt/presentation.xml" => <<~XML,
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                      xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                      xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+        <p:sldIdLst/>
+        <p:notesSz cx="6858000" cy="9144000"/>
+      </p:presentation>
+    XML
+    "docProps/core.xml" => <<~XML,
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                         xmlns:dc="http://purl.org/dc/elements/1.1/">
+        <dc:title>#{text}</dc:title>
+      </cp:coreProperties>
+    XML
+  }
+end
+
+def odf_entries(format, text)
+  mime, body = {
+    "odt" => ["application/vnd.oasis.opendocument.text", "text"],
+    "ods" => ["application/vnd.oasis.opendocument.spreadsheet", "spreadsheet"],
+    "odp" => ["application/vnd.oasis.opendocument.presentation", "presentation"],
+  }.fetch(format)
+
+  body_xml =
+    case body
+    when "text"
+      %(<office:text><text:p>#{text}</text:p></office:text>)
+    when "spreadsheet"
+      %(<office:spreadsheet><table:table table:name="Sheet1"><table:table-row><table:table-cell><text:p>#{text}</text:p></table:table-cell></table:table-row></table:table></office:spreadsheet>)
+    when "presentation"
+      %(<office:presentation><draw:page draw:name="page1"><text:p>#{text}</text:p></draw:page></office:presentation>)
+    end
+
+  {
+    "mimetype" => mime,
+    "META-INF/manifest.xml" => <<~XML,
+      <?xml version="1.0" encoding="UTF-8"?>
+      <manifest:manifest xmlns:manifest="#{ODF_MANIFEST_NS}" manifest:version="1.3">
+        <manifest:file-entry manifest:full-path="/" manifest:media-type="#{mime}"/>
+        <manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/>
+      </manifest:manifest>
+    XML
+    "content.xml" => <<~XML,
+      <?xml version="1.0" encoding="UTF-8"?>
+      <office:document-content
+        xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+        xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+        xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+        xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"
+        office:version="1.3">
+        <office:body>#{body_xml}</office:body>
+      </office:document-content>
+    XML
+  }
+end
+
+write_zip("template.docx", docx_entries(""))
+write_zip("template.xlsx", xlsx_entries(""))
+write_zip("template.pptx", pptx_entries(""))
+
+%w[docx xlsx pptx].each do |format|
+  entries = format == "docx" ? docx_entries("Synthetic Word upload fixture") : nil
+  entries = xlsx_entries("Synthetic Excel upload fixture") if format == "xlsx"
+  entries = pptx_entries("Synthetic PowerPoint upload fixture") if format == "pptx"
+  write_zip("upload.#{format}", entries)
+end
+
+%w[odt ods odp].each do |format|
+  write_zip(
+    "upload.#{format}",
+    odf_entries(format, "Synthetic #{format.upcase} upload fixture"),
+    stored: ["mimetype"],
+  )
+end

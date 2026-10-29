@@ -1,0 +1,14 @@
+name: Discourse Plugin
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  ci:
+    uses: discourse/.github/.github/workflows/discourse-plugin.yml@v1
+    with:
+      core_ref: adf7244270b88a5485b32c7e815217e35c68b4e4
+      name: discourse-nextcloud-office

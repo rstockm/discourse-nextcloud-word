@@ -3,4 +3,10 @@
 node_modules/
 .env
 
-
+# Isolated development runtime, databases and test evidence.
+.local/
+.artifacts/
+.bundle/
+.eslintcache
+*.tsbuildinfo
+dist

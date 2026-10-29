@@ -1,0 +1,38 @@
+schema: spec-driven
+
+context: |
+  Dokumentation auf Deutsch; strukturelle OpenSpec-Überschriften und SHALL/MUST
+  bleiben Englisch. Code und technische Inline-Kommentare auf Englisch.
+  Bestand: Discourse Theme Component 2.1.0 plus separater PHP-Endpoint für
+  Nextcloud WebDAV/OCS; Collabora wird indirekt über Nextcloud verwendet.
+  Keine dauerhafte Dateisynchronisation und keine Discourse-ACL für Shares.
+  Projektnatives Profil statt Vite/Tailwind/Django-Referenzstack.
+  Aktuelle offizielle Discourse-Quellen vor relevanten Änderungen prüfen;
+  Quellenstand und Vorabversionen dokumentieren, Versionen reproduzierbar halten.
+  Details: docs/development/ und AGENTS.md. Architekturbegründungen: docs/adr/.
+  Backend-Plugins sind möglich. Umsetzung des Changes
+  migrate-office-integration-to-plugin ist freigegeben: zuerst lokal testen,
+  erst danach neuer Branch auf GitHub, kein produktives Deployment.
+  Native Homebrew-Testabhängigkeiten und notwendiges Homebrew-Update sind
+  freigegeben, keine dauerhaften Dienste oder Shellprofil-Änderungen.
+  Ableitung von Discourse-Dateirechten bleibt Phase 2.
+  Öffentliche Bearbeitungslinks bleiben bis zu einer gesonderten Entscheidung
+  der Bestandsmechanismus, keine vertrauliche Zugriffskontrolle behaupten.
+  Runtime, Testtooling, CI und Sicherheitsfixes gehören zum freigegebenen
+  Migrations-Change, nicht zum bereits erledigten Harness-Change.
+  Keine Produktionsdaten, Secrets, ungefragten Commits/Pushes oder Deployments.
+  Keine Freigabe erfinden; Tasks erst nach Umsetzung und Prüfung abhaken.
+
+rules:
+  proposal:
+    - Ziel, Nicht-Ziele, betroffene Capabilities und Risiken knapp benennen.
+    - Bestandsverhalten, freigegebenen Scope und Zukunftsoptionen unterscheiden.
+  specs:
+    - Beobachtbare Requirements mit SHALL/MUST und WHEN/THEN-Szenarien schreiben.
+    - Fehlerfälle und Sicherheitsgrenzen berücksichtigen; keine Ist-Mängel legitimieren.
+  design:
+    - Relevante ADRs verlinken statt dauerhafte Begründungen zu duplizieren.
+    - Bei Migrationen Kompatibilität, Rollout und Rückweg beschreiben.
+  tasks:
+    - Kleine prüfbare Einheiten mit realen Checks und Abnahmekriterien verwenden.
+    - Nicht verfügbare Tests als blockiert kennzeichnen, nicht erfolgreich simulieren.
